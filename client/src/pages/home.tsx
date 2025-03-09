@@ -1,5 +1,4 @@
 import Hero from "@/components/hero";
-import Features from "@/components/features";
 import WaitlistForm from "@/components/waitlist-form";
 
 export default function Home() {
@@ -7,7 +6,6 @@ export default function Home() {
     <div className="min-h-screen">
       <main>
         <Hero />
-        <Features />
         <section className="py-16 px-4 bg-muted/50">
           <div className="container mx-auto max-w-lg text-center">
             <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
