@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,16 @@ import { DeviceForm } from '@/components/DeviceForm';
 import { MapView } from '@/components/MapView';
 import { DataDisplay } from '@/components/DataDisplay';
 import { IotDevice, IotData } from '@shared/schema';
+
+// New Footer component
+const Footer = () => {
+  return (
+    <footer className="bg-gray-200 p-4 text-center mt-8">
+      <p>&copy; 2023 IoT &amp; Waze Integration</p>
+    </footer>
+  );
+};
+
 
 export default function Dashboard() {
   const [devices, setDevices] = useState<IotDevice[]>([]);
@@ -59,7 +68,7 @@ export default function Dashboard() {
         },
         body: JSON.stringify(newDevice),
       });
-      
+
       if (response.ok) {
         const device = await response.json();
         setDevices([...devices, device]);
@@ -73,7 +82,7 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">IoT &amp; Waze Integration Dashboard</h1>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
           <Card>
@@ -98,7 +107,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="lg:col-span-2">
           <Card className="mb-6">
             <CardHeader>
@@ -111,7 +120,7 @@ export default function Dashboard() {
               />
             </CardContent>
           </Card>
-          
+
           {selectedDevice && (
             <Card>
               <CardHeader>
@@ -124,6 +133,8 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+      {/* Added Footer component */}
+      <Footer />
     </div>
   );
 }
