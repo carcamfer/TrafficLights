@@ -5,7 +5,9 @@ export interface IStorage {
   isEmailRegistered(email: string): Promise<boolean>;
   createIotDevice(device: InsertIotDevice): Promise<IotDevice>;
   getIotDevice(id: number): Promise<IotDevice | null>;
+  getAllIotDevices(): Promise<IotDevice[]>;
   createIotData(data: InsertIotData): Promise<IotData>;
+  getIotDataByDeviceId(deviceId: number): Promise<IotData[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -39,6 +41,16 @@ export class MemStorage implements IStorage {
   async isEmailRegistered(email: string): Promise<boolean> {
     return Array.from(this.waitlist.values()).some(
       (entry) => entry.email === email
+    );
+  }
+  
+  async getAllIotDevices(): Promise<IotDevice[]> {
+    return Array.from(this.iotDevices.values());
+  }
+  
+  async getIotDataByDeviceId(deviceId: number): Promise<IotData[]> {
+    return Array.from(this.iotData.values()).filter(
+      (data) => data.deviceId === deviceId
     );
   }
 

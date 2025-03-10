@@ -30,6 +30,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all IoT devices
+  app.get("/api/devices", async (req, res) => {
+    try {
+      const devices = await storage.getAllIotDevices();
+      res.json(devices);
+    } catch (error) {
+      console.error('Error fetching devices:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // Get a specific IoT device
+  app.get("/api/devices/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid device ID" });
+      }
+      
+      const device = await storage.getIotDevice(id);
+      if (!device) {
+        return res.status(404).json({ message: "Device not found" });
+      }
+      
+      res.json(device);
+    } catch (error) {
+      console.error('Error fetching device:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   // IoT device registration
   app.post("/api/devices", async (req, res) => {
     try {
@@ -41,6 +72,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: error.errors[0].message });
       }
       throw error;
+    }
+  });
+
+  // Get IoT data for a device
+  app.get("/api/data", async (req, res) => {
+    try {
+      const deviceId = req.query.deviceId ? parseInt(req.query.deviceId as string) : undefined;
+      if (deviceId === undefined) {
+        return res.status(400).json({ message: "Device ID is required" });
+      }
+      
+      if (isNaN(deviceId)) {
+        return res.status(400).json({ message: "Invalid device ID" });
+      }
+      
+      const data = await storage.getIotDataByDeviceId(deviceId);
+      res.json(data);
+    } catch (error) {
+      console.error('Error fetching device data:', error);
+      res.status(500).json({ message: 'Internal server error' });
     }
   });
 
