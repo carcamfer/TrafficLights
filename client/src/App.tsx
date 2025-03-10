@@ -23,7 +23,7 @@ function App() {
             <Route path="/device/:id" element={<DeviceDetail />} />
             <Route path="/mapa" element={
               <Suspense fallback={<div className="p-4 text-center">Cargando mapa...</div>}>
-                <React.lazy(() => import('./pages/CiudadJuarezMap')) />
+                {React.createElement(React.lazy(() => import('./pages/CiudadJuarezMap')))}
               </Suspense>
             } />
             <Route path="*" element={<NotFoundPage />} />
