@@ -72,7 +72,7 @@ let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_INTERVAL = 5000;
 
-function initializeLoRaWAN(): void {
+async function initializeLoRaWAN(): Promise<void> {
   if (!LORA_CONFIG.serverHost || !LORA_CONFIG.serverPort || !LORA_CONFIG.apiKey) {
     console.error('Missing LoRaWAN configuration:', {
       hasHost: !!LORA_CONFIG.serverHost,
@@ -82,42 +82,51 @@ function initializeLoRaWAN(): void {
     throw new Error('Missing LoRaWAN configuration');
   }
 
-  const wsUrl = `ws://${LORA_CONFIG.serverHost}:${LORA_CONFIG.serverPort}/ws`;
-  console.log(`Attempting to connect to LoRaWAN server at ${LORA_CONFIG.serverHost}:${LORA_CONFIG.serverPort}`);
-
-  wsClient = new WebSocket(wsUrl, {
-    headers: {
-      'Authorization': `Bearer ${LORA_CONFIG.apiKey}`,
-    },
-  });
-
-  wsClient.on('open', () => {
-    console.log('Connected to LoRaWAN server');
-    reconnectAttempts = 0;
-  });
-
-  wsClient.on('message', async (data) => {
+  return new Promise((resolve, reject) => {
     try {
-      const message = JSON.parse(data.toString());
-      await processLoRaMessage(message);
+      const wsUrl = `ws://${LORA_CONFIG.serverHost}:${LORA_CONFIG.serverPort}/ws`;
+      console.log(`Attempting to connect to LoRaWAN server at ${LORA_CONFIG.serverHost}:${LORA_CONFIG.serverPort}`);
+
+      wsClient = new WebSocket(wsUrl, {
+        headers: {
+          'Authorization': `Bearer ${LORA_CONFIG.apiKey}`,
+        },
+      });
+
+      wsClient.on('open', () => {
+        console.log('Connected to LoRaWAN server');
+        reconnectAttempts = 0;
+        resolve();
+      });
+
+      wsClient.on('message', async (data) => {
+        try {
+          const message = JSON.parse(data.toString());
+          await processLoRaMessage(message);
+        } catch (error) {
+          console.error('Error processing LoRaWAN message:', error);
+        }
+      });
+
+      wsClient.on('error', (error) => {
+        console.error('LoRaWAN WebSocket error:', error);
+        reject(error);
+      });
+
+      wsClient.on('close', () => {
+        console.log('LoRaWAN connection closed');
+
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          reconnectAttempts++;
+          console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${RECONNECT_INTERVAL/1000}s...`);
+          setTimeout(() => initializeLoRaWAN(), RECONNECT_INTERVAL);
+        } else {
+          console.error(`Failed to reconnect after ${MAX_RECONNECT_ATTEMPTS} attempts`);
+        }
+      });
     } catch (error) {
-      console.error('Error processing LoRaWAN message:', error);
-    }
-  });
-
-  wsClient.on('error', (error) => {
-    console.error('LoRaWAN WebSocket error:', error);
-  });
-
-  wsClient.on('close', () => {
-    console.log('LoRaWAN connection closed');
-
-    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-      reconnectAttempts++;
-      console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${RECONNECT_INTERVAL/1000}s...`);
-      setTimeout(initializeLoRaWAN, RECONNECT_INTERVAL);
-    } else {
-      console.error(`Failed to reconnect after ${MAX_RECONNECT_ATTEMPTS} attempts`);
+      console.error('Error initializing LoRaWAN connection:', error);
+      reject(error);
     }
   });
 }

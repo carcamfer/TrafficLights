@@ -6,14 +6,13 @@ import { ZodError } from "zod";
 import { initializeLoRaWAN } from "./services/lorawan";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize LoRaWAN connection
-  try {
-    initializeLoRaWAN();
-  } catch (error) {
+  // Initialize LoRaWAN connection without blocking server startup
+  initializeLoRaWAN().catch(error => {
     console.error('Failed to initialize LoRaWAN:', error);
-  }
+    console.log('Server will continue running without LoRaWAN connection');
+  });
 
-  // Existing waitlist route
+  // Waitlist route
   app.post("/api/waitlist", async (req, res) => {
     try {
       const data = insertWaitlistSchema.parse(req.body);
@@ -38,7 +37,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // IoT Routes
-
   // List all IoT devices
   app.get("/api/devices", async (_req, res) => {
     try {
