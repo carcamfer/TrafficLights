@@ -32,12 +32,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: error.errors[0].message 
         });
       }
-      throw error;
+      console.error('Error handling waitlist request:', error);
+      res.status(500).json({ message: 'Internal server error' });
     }
   });
 
-  // IoT Routes
-  // List all IoT devices
+  // IoT Routes - All wrapped in try/catch to prevent server crashes
   app.get("/api/devices", async (_req, res) => {
     try {
       const devices = await storage.listIotDevices();
@@ -48,7 +48,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get specific IoT device
   app.get("/api/devices/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -68,7 +67,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Register new IoT device
   app.post("/api/devices", async (req, res) => {
     try {
       const data = insertIotDeviceSchema.parse(req.body);
@@ -83,7 +81,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get device data history
   app.get("/api/devices/:id/data", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -100,7 +97,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Manual data ingestion endpoint (for testing)
   app.post("/api/devices/:id/data", async (req, res) => {
     try {
       const deviceId = parseInt(req.params.id);

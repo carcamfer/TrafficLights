@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Suspense } from 'react';
@@ -8,6 +7,8 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import Dashboard from './pages/Dashboard';
+import Home from './pages/home';
+import { Toaster } from "@/components/ui/toaster";
 
 function App() {
   return (
@@ -15,7 +16,7 @@ function App() {
       <NavBar />
       <main className="flex-grow">
         <Routes>
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<Home />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/mapa" element={
@@ -27,6 +28,7 @@ function App() {
         </Routes>
       </main>
       <Footer />
+      <Toaster />
     </div>
   );
 }
