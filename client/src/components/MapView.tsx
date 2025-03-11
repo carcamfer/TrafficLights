@@ -12,14 +12,21 @@ interface TrafficLight {
 
 interface MapViewProps {
   trafficLights: TrafficLight[];
+  onPositionChange?: (id: number, newPosition: [number, number]) => void;
 }
 
-const MapView: React.FC<MapViewProps> = ({ trafficLights }) => {
+const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) => {
   // Colores fijos para los estados de los semáforos
   const stateColors = {
     red: '#ff0000',
     yellow: '#ffff00',
     green: '#00ff00'
+  };
+
+  const handleMarkerDragEnd = (id: number, event: any) => {
+    const marker = event.target;
+    const position = marker.getLatLng();
+    onPositionChange?.(id, [position.lat, position.lng]);
   };
 
   return (
@@ -37,6 +44,10 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights }) => {
           <Marker 
             key={light.id}
             position={light.position}
+            draggable={true}
+            eventHandlers={{
+              dragend: (e) => handleMarkerDragEnd(light.id, e)
+            }}
           >
             <Popup>
               <div className="p-2">
@@ -47,6 +58,9 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights }) => {
                     style={{ backgroundColor: stateColors[light.state] }}
                   />
                   <p>Estado actual: {light.state}</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Puedes arrastrar este marcador para mover el semáforo
+                  </p>
                 </div>
               </div>
             </Popup>

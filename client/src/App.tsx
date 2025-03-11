@@ -43,6 +43,14 @@ function App() {
     );
   };
 
+  const handlePositionChange = (id: number, newPosition: [number, number]) => {
+    setTrafficLights(prev =>
+      prev.map(light =>
+        light.id === id ? { ...light, position: newPosition } : light
+      )
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow-sm">
@@ -53,7 +61,10 @@ function App() {
       <main className="max-w-7xl mx-auto py-6 px-4">
         <div className="flex gap-6">
           <div className="flex-1">
-            <MapView trafficLights={trafficLights} />
+            <MapView 
+              trafficLights={trafficLights} 
+              onPositionChange={handlePositionChange}
+            />
           </div>
           <div className="w-80">
             <div className="bg-white p-4 rounded-lg shadow">
