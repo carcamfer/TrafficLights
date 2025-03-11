@@ -11,13 +11,16 @@ const NavBar: React.FC = () => {
         </Link>
         <div className="flex gap-4">
           <Link to="/" className="text-primary-foreground hover:text-gray-200">
-            Home
+            Inicio
+          </Link>
+          <Link to="/dashboard" className="text-primary-foreground hover:text-gray-200">
+            Dashboard
           </Link>
           <Link to="/mapa" className="text-primary-foreground hover:text-gray-200">
             Mapa
           </Link>
           <Link to="/devices" className="text-primary-foreground hover:text-gray-200">
-            Devices
+            Dispositivos
           </Link>
         </div>
       </div>

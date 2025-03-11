@@ -1,8 +1,8 @@
 
 import React, { useEffect, useRef } from 'react';
+import { IotDevice } from '@shared/schema';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { IotDevice } from '@shared/schema';
 
 interface MapViewProps {
   devices: IotDevice[];
@@ -17,7 +17,8 @@ export function MapView({ devices, selectedDevice }: MapViewProps) {
   useEffect(() => {
     // Initialize map if it doesn't exist
     if (mapRef.current && !mapInstanceRef.current) {
-      const map = L.map(mapRef.current).setView([0, 0], 2);
+      // Configuración inicial del mapa centrada en Ciudad Juárez
+      const map = L.map(mapRef.current).setView([31.7300, -106.4850], 12);
       
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -83,19 +84,10 @@ export function MapView({ devices, selectedDevice }: MapViewProps) {
     // Highlight selected marker
     const selectedMarker = markersRef.current[selectedDevice.id];
     if (selectedMarker) {
-      selectedMarker.setIcon(L.icon({
-        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-        shadowSize: [41, 41]
-      }));
-      
       selectedMarker.openPopup();
-      mapInstanceRef.current.setView([selectedDevice.location.lat, selectedDevice.location.lng], 14);
+      // Note: For a custom highlight we would need to define a custom icon
     }
   }, [selectedDevice]);
 
-  return <div ref={mapRef} className="map-container rounded-md" />;
+  return <div ref={mapRef} className="w-full h-full" />;
 }
