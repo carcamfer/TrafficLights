@@ -1,45 +1,21 @@
-import React, { useEffect, useRef, useState } from 'react';
+
+import React, { useRef, useEffect, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Button } from './ui/button';
-import { useToast } from '../hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import html2canvas from 'html2canvas';
 
-// Definir coordenadas para Ciudad Juárez
-const CIUDAD_JUAREZ_COORDS = {
-  lat: 31.6904,
-  lng: -106.4245
-}
+// Coordenadas de Ciudad Juárez
+const CIUDAD_JUAREZ_COORDS = { lat: 31.6904, lng: -106.4245 };
 
-// Datos simulados de semáforos
+// Datos de muestra para semáforos
 const TRAFFIC_LIGHTS = [
-  { 
-    id: 1, 
-    lat: 31.6904, 
-    lng: -106.4245,
-    greenTime: 45,
-    redTime: 60,
-    deviceId: "IOT-001",
-    status: "online"
-  },
-  { 
-    id: 2, 
-    lat: 31.6920, 
-    lng: -106.4270,
-    greenTime: 30,
-    redTime: 50,
-    deviceId: "IOT-002",
-    status: "online"
-  },
-  { 
-    id: 3, 
-    lat: 31.6880, 
-    lng: -106.4230,
-    greenTime: 40,
-    redTime: 55,
-    deviceId: "IOT-003",
-    status: "offline"
-  }
+  { id: 1, deviceId: 'TL001', greenTime: 30, redTime: 45, status: 'operational', lat: 31.6904, lng: -106.424 },
+  { id: 2, deviceId: 'TL002', greenTime: 25, redTime: 40, status: 'operational', lat: 31.6925, lng: -106.422 },
+  { id: 3, deviceId: 'TL003', greenTime: 35, redTime: 50, status: 'maintenance', lat: 31.6880, lng: -106.426 },
+  { id: 4, deviceId: 'TL004', greenTime: 40, redTime: 60, status: 'operational', lat: 31.6940, lng: -106.430 },
+  { id: 5, deviceId: 'TL005', greenTime: 20, redTime: 35, status: 'operational', lat: 31.6850, lng: -106.420 },
 ];
 
 const MapView: React.FC = () => {
@@ -50,29 +26,62 @@ const MapView: React.FC = () => {
 
   useEffect(() => {
     if (mapContainerRef.current && !mapRef.current) {
-      // Inicializar el mapa
-      const map = L.map(mapContainerRef.current).setView(
-        [CIUDAD_JUAREZ_COORDS.lat, CIUDAD_JUAREZ_COORDS.lng],
-        13
-      );
+      try {
+        // Inicializar el mapa
+        const map = L.map(mapContainerRef.current).setView(
+          [CIUDAD_JUAREZ_COORDS.lat, CIUDAD_JUAREZ_COORDS.lng],
+          13
+        );
 
-      // Añadir capa de OpenStreetMap
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(map);
+        // Añadir capa de OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
 
-      // Guardar referencia al mapa
-      mapRef.current = map;
+        // Guardar referencia al mapa
+        mapRef.current = map;
 
-      // Evento para actualizar la vista actual
-      map.on('moveend', () => {
-        if (map) {
-          setCurrentView({
-            center: map.getCenter(),
-            zoom: map.getZoom()
+        // Evento para actualizar la vista actual
+        map.on('moveend', () => {
+          if (map) {
+            setCurrentView({
+              center: map.getCenter(),
+              zoom: map.getZoom()
+            });
+          }
+        });
+
+        // Inicializar la vista actual
+        setCurrentView({
+          center: map.getCenter(),
+          zoom: map.getZoom()
+        });
+
+        // Agregar marcadores para los semáforos
+        TRAFFIC_LIGHTS.forEach(light => {
+          const trafficLightIcon = L.divIcon({
+            html: `<div class="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white font-bold">S</div>`,
+            className: 'traffic-light-icon',
+            iconSize: [24, 24]
           });
-        }
-      });
+
+          L.marker([light.lat, light.lng], { icon: trafficLightIcon })
+            .addTo(map)
+            .bindPopup(`
+              <strong>ID: ${light.deviceId}</strong><br/>
+              Tiempo en verde: ${light.greenTime}s<br/>
+              Tiempo en rojo: ${light.redTime}s<br/>
+              Estado: ${light.status === 'operational' ? 'Operacional' : 'Mantenimiento'}
+            `);
+        });
+      } catch (error) {
+        console.error("Error al inicializar el mapa:", error);
+        toast({
+          title: "Error",
+          description: "No se pudo inicializar el mapa",
+          variant: "destructive"
+        });
+      }
     }
 
     // Limpiar al desmontar
@@ -82,7 +91,7 @@ const MapView: React.FC = () => {
         mapRef.current = null;
       }
     };
-  }, []);
+  }, [mapContainerRef.current]);
 
   const handleSaveView = async () => {
     if (currentView && mapRef.current) {
@@ -124,7 +133,7 @@ const MapView: React.FC = () => {
               return distance && distance < 2000; // Dentro de 2km
             });
             
-            // Aquí guardaríamos la vista en algún almacenamiento (localStorage por ahora)
+            // Guardar la vista en localStorage
             const savedViews = JSON.parse(localStorage.getItem('savedMapViews') || '[]');
             const newView = {
               id: Date.now(),
@@ -133,14 +142,20 @@ const MapView: React.FC = () => {
               lng: currentView.center.lng,
               zoom: currentView.zoom,
               mapImage: mapImageUrl,
-              trafficLights: nearbyTrafficLights
+              trafficLights: nearbyTrafficLights.map(light => ({
+                ...light,
+                // Simular datos en tiempo real
+                greenTime: Math.floor(Math.random() * 20) + 20,
+                redTime: Math.floor(Math.random() * 30) + 30,
+                status: Math.random() > 0.2 ? 'operational' : 'maintenance'
+              }))
             };
-
-            // Este código ha sido reemplazado en el fragmento anteriorView]));
+            
+            localStorage.setItem('savedMapViews', JSON.stringify([...savedViews, newView]));
             
             toast({
-              title: "Éxito",
-              description: "Vista guardada correctamente en el Dashboard",
+              title: "Vista guardada",
+              description: `Se ha guardado la intersección como "${newView.name}" con ${nearbyTrafficLights.length} semáforos`,
             });
           } catch (error) {
             console.error("Error al capturar la imagen:", error);
@@ -151,12 +166,6 @@ const MapView: React.FC = () => {
             });
           }
         }, 1000); // Esperar 1 segundo para asegurar que todos los tiles se carguen
-      } catch (error) {View]));
-
-        toast({
-          title: "Vista guardada",
-          description: `Se ha guardado la intersección como "${newView.name}" con ${nearbyTrafficLights.length} semáforos`,
-        });
       } catch (error) {
         console.error("Error al guardar la vista:", error);
         toast({
@@ -167,34 +176,6 @@ const MapView: React.FC = () => {
       }
     }
   };
-
-  // Agregar marcadores para los semáforos
-  useEffect(() => {
-    if (mapRef.current) {
-      // Icono personalizado para semáforos
-      const trafficLightIcon = L.divIcon({
-        html: `<div class="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white font-bold">S</div>`,
-        className: 'traffic-light-icon',
-        iconSize: [24, 24]
-      });
-
-      // Añadir marcadores para cada semáforo
-      TRAFFIC_LIGHTS.forEach(light => {
-        const marker = L.marker([light.lat, light.lng], { icon: trafficLightIcon })
-          .addTo(mapRef.current!);
-          
-        // Popup con información del semáforo
-        marker.bindPopup(`
-          <div class="p-2">
-            <h3 class="font-bold">Semáforo ID: ${light.deviceId}</h3>
-            <p>Tiempo Verde: ${light.greenTime}s</p>
-            <p>Tiempo Rojo: ${light.redTime}s</p>
-            <p>Estado: ${light.status === 'online' ? 'En línea' : 'Desconectado'}</p>
-          </div>
-        `);
-      });
-    }
-  }, [mapRef.current]);
 
   return (
     <div className="flex flex-col gap-4">
