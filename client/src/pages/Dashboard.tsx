@@ -1,13 +1,20 @@
+
 import React, { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MapView from '@/components/MapView';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
 
 const Dashboard = () => {
   const [captures, setCaptures] = useState<string[]>([]);
 
   const handleCapture = (imageData: string) => {
     setCaptures(prev => [...prev, imageData]);
+  };
+
+  const handleDeleteCapture = (index: number) => {
+    setCaptures(prev => prev.filter((_, i) => i !== index));
   };
 
   // Coordenadas de cruces importantes en Ciudad Juárez
@@ -66,7 +73,7 @@ const Dashboard = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {captures.map((capture, idx) => (
-                    <div key={idx} className="border rounded-lg p-4">
+                    <div key={idx} className="border rounded-lg p-4 relative">
                       <h3 className="font-medium mb-2">Captura #{idx + 1}</h3>
                       <div className="relative">
                         <img 
@@ -80,8 +87,21 @@ const Dashboard = () => {
                             <p>Verde: 30s</p>
                             <p>Rojo: 45s</p>
                             <p>Dispositivo: Conectado</p>
+                            <p>Latencia: 120ms</p>
+                            <p>Último reporte: hace 2 min</p>
                           </div>
                         </div>
+                      </div>
+                      <div className="mt-2 flex justify-end">
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => handleDeleteCapture(idx)}
+                          className="flex items-center gap-1"
+                        >
+                          <Trash2 size={16} />
+                          Eliminar
+                        </Button>
                       </div>
                     </div>
                   ))}

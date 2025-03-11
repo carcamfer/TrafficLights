@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -23,7 +24,7 @@ const MapView: React.FC<MapViewProps> = ({ center, zoom, onCapture }) => {
 
       // Marcador de ejemplo para un semáforo
       const trafficLightIcon = L.icon({
-        iconUrl: '/attached_assets/semaforo.PNG', // Needs to be a valid path
+        iconUrl: '/attached_assets/semaforo.PNG',
         iconSize: [32, 32],
         iconAnchor: [16, 16]
       });
@@ -45,28 +46,30 @@ const MapView: React.FC<MapViewProps> = ({ center, zoom, onCapture }) => {
     }
   }, [center, zoom]);
 
-  const captureMap = () => {
-    if (mapRef.current && onCapture) {
-      html2canvas(mapRef.current, {
+  const handleCapture = async () => {
+    if (!mapRef.current || !onCapture) return;
+    
+    try {
+      const canvas = await html2canvas(mapRef.current, {
         useCORS: true,
         allowTaint: true,
-        logging: true,
-      }).then(canvas => {
-        const imageData = canvas.toDataURL('image/png');
-        onCapture(imageData);
-      }).catch(error => {
-        console.error('Error capturing map:', error);
+        scale: 2
       });
+      
+      const image = canvas.toDataURL('image/png');
+      onCapture(image);
+    } catch (error) {
+      console.error("Error capturing map:", error);
     }
   };
 
   return (
-    <div className="relative">
-      <div ref={mapRef} className="map-container rounded-lg" style={{ height: '500px' }}></div>
+    <div className="flex flex-col gap-2">
+      <div ref={mapRef} className="map-container rounded-md border" style={{ height: "500px" }}></div>
       {onCapture && (
-        <button
-          onClick={captureMap}
-          className="absolute bottom-4 right-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg shadow"
+        <button 
+          onClick={handleCapture}
+          className="bg-primary text-primary-foreground px-3 py-2 rounded-md hover:opacity-90 transition self-end"
         >
           Capturar Vista
         </button>

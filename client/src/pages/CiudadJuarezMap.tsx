@@ -1,26 +1,69 @@
-import React from 'react';
+
+import { useState } from 'react';
 import MapView from '@/components/MapView';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from '@/components/ui/button';
+import { ChevronLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const CiudadJuarezMap = () => {
-  // Coordenadas centradas en Ciudad Juárez
-  const juarezCoordinates: [number, number] = [31.6904, -106.4245];
+  // Centro de Ciudad Juárez
+  const cityCenter: [number, number] = [31.6904, -106.4245];
+  const [captures, setCaptures] = useState<string[]>([]);
+
+  const handleCapture = (imageData: string) => {
+    setCaptures(prev => [...prev, imageData]);
+  };
 
   return (
     <div className="container mx-auto py-6">
-      <h1 className="text-3xl font-bold mb-6">Mapa de Semáforos de Ciudad Juárez</h1>
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <MapView center={juarezCoordinates} zoom={12} />
-        <div className="mt-4">
-          <h2 className="text-xl font-semibold mb-2">Información del Sistema</h2>
-          <p className="mb-2">
-            Este mapa muestra la ubicación de los semáforos inteligentes en Ciudad Juárez.
-            Puedes acercar el mapa para ver detalles específicos de cada semáforo.
-          </p>
-          <p>
-            Haz clic en cualquier semáforo para ver su estado actual y estadísticas.
-          </p>
-        </div>
+      <div className="flex items-center mb-6">
+        <Link to="/dashboard">
+          <Button variant="outline" size="sm" className="mr-4">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Volver
+          </Button>
+        </Link>
+        <h1 className="text-3xl font-bold">Mapa de Ciudad Juárez</h1>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Vista General</CardTitle>
+          <CardDescription>
+            Monitoreo en tiempo real de semáforos inteligentes en toda la ciudad
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <MapView 
+            center={cityCenter}
+            zoom={13}
+            onCapture={handleCapture}
+          />
+        </CardContent>
+      </Card>
+
+      {captures.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Capturas Recientes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {captures.map((capture, idx) => (
+                <div key={idx} className="border rounded-lg p-4">
+                  <h3 className="font-medium mb-2">Captura #{idx + 1}</h3>
+                  <img 
+                    src={capture} 
+                    alt={`Captura #${idx + 1}`} 
+                    className="w-full rounded-md"
+                  />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
