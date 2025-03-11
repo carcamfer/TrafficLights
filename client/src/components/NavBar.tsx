@@ -29,12 +29,7 @@ const NavBar: React.FC = () => {
           >
             Mapa
           </Link>
-          <Link 
-            to="/devices" 
-            className={`text-primary-foreground hover:text-gray-200 ${location.pathname === '/devices' ? 'font-semibold' : ''}`}
-          >
-            Dispositivos
-          </Link>
+          {/* Se eliminó la pestaña de Dispositivos */}
         </div>
       </div>
     </nav>

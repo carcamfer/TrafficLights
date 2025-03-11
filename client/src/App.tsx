@@ -8,7 +8,7 @@ import DeviceDetail from './pages/DeviceDetail';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
-import DevicesPage from './pages/DevicesPage'; // Added import for DevicesPage
+// Se eliminó la importación de DevicesPage
 
 function App() {
   return (
@@ -26,7 +26,6 @@ function App() {
                 {React.createElement(React.lazy(() => import('./pages/CiudadJuarezMap')))}
               </Suspense>
             } />
-            <Route path="/devices" element={<DevicesPage />} /> {/* Added route for DevicesPage */}
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>
