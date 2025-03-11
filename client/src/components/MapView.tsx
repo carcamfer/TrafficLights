@@ -1,41 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
-import 'leaflet/dist/leaflet.css';
-import { MapContainer, TileLayer, useMap, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import html2canvas from 'html2canvas';
 
-// Definir icono de semáforo
-const trafficLightIcon = new L.Icon({
-  iconUrl: '../../../attached_assets/semaforo.PNG',
-  iconSize: [25, 25],
-  iconAnchor: [12, 12],
-  popupAnchor: [0, -10]
-});
-
-// Definir ubicaciones de semáforos (ejemplo)
-const trafficLights = [
-  {
-    id: 1,
-    position: [31.6904, -106.4245],
-    greenTime: 30,
-    redTime: 45,
-    deviceId: "IoT-TL-001"
-  },
-  {
-    id: 2,
-    position: [31.6910, -106.4250],
-    greenTime: 25,
-    redTime: 40,
-    deviceId: "IoT-TL-002"
-  },
-  {
-    id: 3,
-    position: [31.6898, -106.4240],
-    greenTime: 35,
-    redTime: 50,
-    deviceId: "IoT-TL-003"
-  }
-];
+import React, { useEffect, useRef } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import html2canvas from "html2canvas";
 
 interface MapViewProps {
   center: [number, number];
@@ -43,82 +10,72 @@ interface MapViewProps {
   onCapture?: (imageData: string) => void;
 }
 
-const SetView: React.FC<{ center: [number, number]; zoom: number }> = ({ center, zoom }) => {
-  const map = useMap();
-  map.setView(center, zoom);
-  return null;
-};
-
-const TrafficLightMarkers: React.FC = () => {
-  return (
-    <>
-      {trafficLights.map(light => (
-        <Marker 
-          key={light.id} 
-          position={light.position as [number, number]} 
-          icon={trafficLightIcon}
-        >
-          <Popup>
-            <div>
-              <h3 className="font-bold">Semáforo {light.id}</h3>
-              <p>Tiempo Verde: {light.greenTime}s</p>
-              <p>Tiempo Rojo: {light.redTime}s</p>
-              <p>Dispositivo: {light.deviceId}</p>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
-    </>
-  );
-};
-
 const MapView: React.FC<MapViewProps> = ({ center, zoom, onCapture }) => {
-  const mapRef = useRef<L.Map | null>(null);
-  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
 
-  const captureMap = () => {
-    if (!mapContainerRef.current || !onCapture) return;
+  useEffect(() => {
+    if (mapRef.current && !mapInstanceRef.current) {
+      const map = L.map(mapRef.current).setView(center, zoom);
 
-    html2canvas(mapContainerRef.current).then(canvas => {
-      const imageData = canvas.toDataURL('image/png');
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+
+      // Marcador de ejemplo para un semáforo
+      const trafficLightIcon = L.icon({
+        iconUrl: '/attached_assets/semaforo.PNG',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+
+      // Añadir semáforos en puntos cercanos a la ubicación central
+      L.marker([center[0] + 0.0002, center[1] + 0.0002], { icon: trafficLightIcon })
+        .addTo(map)
+        .bindPopup('Semáforo 1: Verde 30s, Rojo 45s');
+
+      L.marker([center[0] - 0.0003, center[1] + 0.0001], { icon: trafficLightIcon })
+        .addTo(map)
+        .bindPopup('Semáforo 2: Verde 25s, Rojo 40s');
+
+      L.marker([center[0], center[1] - 0.0002], { icon: trafficLightIcon })
+        .addTo(map)
+        .bindPopup('Semáforo 3: Verde 35s, Rojo 50s');
+
+      mapInstanceRef.current = map;
+    }
+  }, [center, zoom]);
+
+  const handleCapture = async () => {
+    if (!mapRef.current || !onCapture) return;
+    
+    try {
+      const mapElement = mapRef.current;
+      const canvas = await html2canvas(mapElement, {
+        useCORS: true,
+        allowTaint: true,
+        scale: 2,
+        logging: true,
+        ignoreElements: (element) => {
+          // Ignorar elementos que puedan causar problemas en la captura
+          return false;
+        }
+      });
       
-      // Crear elementos de información de semáforos para mostrar junto a la captura
-      const trafficLightInfo = trafficLights.map(light => ({
-        id: light.id,
-        greenTime: light.greenTime,
-        redTime: light.redTime,
-        deviceId: light.deviceId
-      }));
-
-      // Pasar la imagen capturada
-      onCapture(imageData);
-    });
-  };);
+      const image = canvas.toDataURL('image/png');
+      onCapture(image);
+    } catch (error) {
+      console.error("Error capturing map:", error);
+    }
   };
 
   return (
-    <div className="relative">
-      <div ref={mapContainerRef} className="map-container">
-        <MapContainer
-          center={center}
-          zoom={zoom}
-          style={{ height: '500px', width: '100%' }}
-          whenCreated={(map) => {
-            mapRef.current = map;
-          }}
-        >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
-          <SetView center={center} zoom={zoom} />
-          <TrafficLightMarkers />
-        </MapContainer>
-      </div>
+    <div className="flex flex-col gap-2">
+      <div ref={mapRef} className="map-container rounded-md border" style={{ height: "500px" }}></div>
       {onCapture && (
-        <button
-          onClick={captureMap}
-          className="absolute bottom-4 right-4 bg-primary text-white py-2 px-4 rounded-md hover:bg-opacity-90"
+        <button 
+          onClick={handleCapture}
+          className="bg-primary text-primary-foreground px-3 py-2 rounded-md hover:opacity-90 transition self-end"
         >
           Capturar Vista
         </button>
