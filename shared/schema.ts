@@ -19,39 +19,71 @@ export const insertWaitlistSchema = createInsertSchema(waitlist)
 export type InsertWaitlist = z.infer<typeof insertWaitlistSchema>;
 export type Waitlist = typeof waitlist.$inferSelect;
 
-// Define the IoT device table schema
+// IoT device schema
 export const iotDevice = pgTable("iot_device", {
   id: serial("id").primaryKey(),
   deviceEUI: text("device_eui").notNull().unique(),
   name: text("name").notNull(),
+  description: text("description"),
   location: jsonb("location").notNull(), // {lat: number, lng: number}
+  type: text("type").notNull(), // e.g., 'traffic_sensor', 'environmental_sensor'
+  status: text("status").notNull().default('active'),
+  lastSeen: timestamp("last_seen"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Define the IoT data table schema
+// IoT data schema with traffic-specific fields
 export const iotData = pgTable("iot_data", {
   id: serial("id").primaryKey(),
   deviceId: serial("device_id").references(() => iotDevice.id),
-  temperature: real("temperature"),
-  humidity: real("humidity"),
-  batteryLevel: real("battery_level"),
-  rssi: real("rssi"),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
-  rawData: jsonb("raw_data"),
+  trafficLevel: real("traffic_level"), // 0-1 scale of traffic congestion
+  vehicleCount: real("vehicle_count"), // number of vehicles detected
+  averageSpeed: real("average_speed"), // in km/h
+  roadCondition: text("road_condition"), // e.g., 'normal', 'wet', 'icy'
+  temperature: real("temperature"), // ambient temperature
+  humidity: real("humidity"), // ambient humidity
+  batteryLevel: real("battery_level"),
+  rssi: real("rssi"), // signal strength
+  rawData: jsonb("raw_data"), // additional sensor data
 });
 
-// Create insert schemas
+// Insert schemas with validation
 export const insertIotDeviceSchema = createInsertSchema(iotDevice)
-  .pick({ deviceEUI: true, name: true, location: true })
+  .pick({ 
+    deviceEUI: true, 
+    name: true, 
+    description: true,
+    location: true,
+    type: true 
+  })
   .extend({
     location: z.object({
-      lat: z.number(),
-      lng: z.number(),
+      lat: z.number().min(-90).max(90),
+      lng: z.number().min(-180).max(180),
     }),
+    type: z.enum(['traffic_sensor', 'environmental_sensor']),
   });
 
 export const insertIotDataSchema = createInsertSchema(iotData)
-  .pick({ deviceId: true, temperature: true, humidity: true, batteryLevel: true, rssi: true, rawData: true });
+  .pick({ 
+    deviceId: true,
+    trafficLevel: true,
+    vehicleCount: true,
+    averageSpeed: true,
+    roadCondition: true,
+    temperature: true,
+    humidity: true,
+    batteryLevel: true,
+    rssi: true,
+    rawData: true 
+  })
+  .extend({
+    trafficLevel: z.number().min(0).max(1).optional(),
+    vehicleCount: z.number().min(0).optional(),
+    averageSpeed: z.number().min(0).optional(),
+    roadCondition: z.enum(['normal', 'wet', 'icy', 'unknown']).optional(),
+  });
 
 export type InsertIotDevice = z.infer<typeof insertIotDeviceSchema>;
 export type InsertIotData = z.infer<typeof insertIotDataSchema>;

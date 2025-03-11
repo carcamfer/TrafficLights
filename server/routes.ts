@@ -3,9 +3,16 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertWaitlistSchema, insertIotDeviceSchema, insertIotDataSchema } from "@shared/schema";
 import { ZodError } from "zod";
-import { handleLoRaMessage } from "./lorawan";
+import { initializeLoRaWAN } from "./services/lorawan";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize LoRaWAN connection
+  try {
+    initializeLoRaWAN();
+  } catch (error) {
+    console.error('Failed to initialize LoRaWAN:', error);
+  }
+
   // Existing waitlist route
   app.post("/api/waitlist", async (req, res) => {
     try {
@@ -30,30 +37,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all IoT devices
-  app.get("/api/devices", async (req, res) => {
+  // IoT Routes
+
+  // List all IoT devices
+  app.get("/api/devices", async (_req, res) => {
     try {
-      const devices = await storage.getAllIotDevices();
+      const devices = await storage.listIotDevices();
       res.json(devices);
     } catch (error) {
-      console.error('Error fetching devices:', error);
+      console.error('Error listing devices:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   });
 
-  // Get a specific IoT device
+  // Get specific IoT device
   app.get("/api/devices/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid device ID" });
       }
-      
+
       const device = await storage.getIotDevice(id);
       if (!device) {
         return res.status(404).json({ message: "Device not found" });
       }
-      
+
       res.json(device);
     } catch (error) {
       console.error('Error fetching device:', error);
@@ -61,7 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // IoT device registration
+  // Register new IoT device
   app.post("/api/devices", async (req, res) => {
     try {
       const data = insertIotDeviceSchema.parse(req.body);
@@ -71,23 +80,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
-      throw error;
+      console.error('Error creating device:', error);
+      res.status(500).json({ message: 'Internal server error' });
     }
   });
 
-  // Get IoT data for a device
-  app.get("/api/data", async (req, res) => {
+  // Get device data history
+  app.get("/api/devices/:id/data", async (req, res) => {
     try {
-      const deviceId = req.query.deviceId ? parseInt(req.query.deviceId as string) : undefined;
-      if (deviceId === undefined) {
-        return res.status(400).json({ message: "Device ID is required" });
-      }
-      
-      if (isNaN(deviceId)) {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid device ID" });
       }
-      
-      const data = await storage.getIotDataByDeviceId(deviceId);
+
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const data = await storage.getIotDataHistory(id, limit);
       res.json(data);
     } catch (error) {
       console.error('Error fetching device data:', error);
@@ -95,35 +102,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // IoT data ingestion
-  app.post("/api/data", async (req, res) => {
+  // Manual data ingestion endpoint (for testing)
+  app.post("/api/devices/:id/data", async (req, res) => {
     try {
-      const data = insertIotDataSchema.parse(req.body);
+      const deviceId = parseInt(req.params.id);
+      if (isNaN(deviceId)) {
+        return res.status(400).json({ message: "Invalid device ID" });
+      }
 
-      // Verify device exists before creating data
-      const device = await storage.getIotDevice(data.deviceId);
+      const device = await storage.getIotDevice(deviceId);
       if (!device) {
         return res.status(404).json({ message: "Device not found" });
       }
 
-      // Store IoT data
-      const iotData = await storage.createIotData(data);
-
-      // Process and forward to Waze if location data is present
-      if (device.location) {
-        await handleLoRaMessage({
-          deviceEUI: device.deviceEUI,
-          data: iotData,
-          location: device.location
-        });
-      }
-
-      res.status(201).json(iotData);
+      const data = insertIotDataSchema.parse({ ...req.body, deviceId });
+      const savedData = await storage.createIotData(data);
+      res.status(201).json(savedData);
     } catch (error) {
       if (error instanceof ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
-      console.error('Error processing IoT data:', error);
+      console.error('Error creating device data:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   });
