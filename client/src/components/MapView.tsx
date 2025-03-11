@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -106,24 +105,40 @@ const MapView: React.FC = () => {
           });
           return;
         }
-        
+
         toast({
           title: "Procesando",
           description: "Capturando mapa, por favor espere...",
         });
-        
+
         // Asegurarse de que todos los tiles se hayan cargado antes de capturar
         setTimeout(async () => {
           try {
+            // Mejoradas las opciones de captura para mayor precisión
             const canvas = await html2canvas(mapElement, {
               useCORS: true,
               allowTaint: true,
               logging: true,
-              scale: window.devicePixelRatio
+              scale: 2, // Mayor escala para mejor calidad
+              backgroundColor: null,
+              imageTimeout: 0, // Sin timeout para imágenes
+              onclone: (documentClone) => {
+                // Asegurarse que los elementos del mapa son visibles en el clon
+                const clonedMapElement = documentClone.getElementById('map-container');
+                if (clonedMapElement) {
+                  const allIcons = clonedMapElement.querySelectorAll('.leaflet-marker-icon');
+                  allIcons.forEach(icon => {
+                    if (icon instanceof HTMLElement) {
+                      icon.style.display = 'block';
+                      icon.style.visibility = 'visible';
+                    }
+                  });
+                }
+              }
             });
-            
+
             const mapImageUrl = canvas.toDataURL('image/png');
-            
+
             // Encontrar semáforos cercanos a la vista actual
             const nearbyTrafficLights = TRAFFIC_LIGHTS.filter(light => {
               const distance = mapRef.current?.distance(
@@ -132,9 +147,10 @@ const MapView: React.FC = () => {
               );
               return distance && distance < 2000; // Dentro de 2km
             });
-            
+
             // Guardar la vista en localStorage
             const savedViews = JSON.parse(localStorage.getItem('savedMapViews') || '[]');
+
             const newView = {
               id: Date.now(),
               name: `Intersección ${savedViews.length + 1}`,
@@ -150,9 +166,9 @@ const MapView: React.FC = () => {
                 status: Math.random() > 0.2 ? 'operational' : 'maintenance'
               }))
             };
-            
+
             localStorage.setItem('savedMapViews', JSON.stringify([...savedViews, newView]));
-            
+
             toast({
               title: "Vista guardada",
               description: `Se ha guardado la intersección como "${newView.name}" con ${nearbyTrafficLights.length} semáforos`,
@@ -165,7 +181,7 @@ const MapView: React.FC = () => {
               variant: "destructive"
             });
           }
-        }, 1000); // Esperar 1 segundo para asegurar que todos los tiles se carguen
+        }, 2000); // Aumentado a 2 segundos para asegurar que todos los elementos se carguen
       } catch (error) {
         console.error("Error al guardar la vista:", error);
         toast({

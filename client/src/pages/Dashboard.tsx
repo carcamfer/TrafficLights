@@ -118,19 +118,28 @@ export default function Dashboard() {
                           {view.trafficLights?.map(light => (
                             <div key={light.id} className="border p-3 rounded-md">
                               <div className="flex justify-between items-start mb-2">
-                                <span className="font-medium">{light.deviceId}</span>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 bg-amber-200 border border-black flex items-center justify-center" style={{transform: 'rotate(90deg)'}}>
+                                    <div className="flex flex-col h-full">
+                                      <div className="w-3 h-1 bg-red-600 rounded-full"></div>
+                                      <div className="w-3 h-1 bg-amber-500 rounded-full"></div>
+                                      <div className="w-3 h-1 bg-green-600 rounded-full"></div>
+                                    </div>
+                                  </div>
+                                  <span className="font-medium">{light.deviceId}</span>
+                                </div>
                                 <Badge variant={light.status === 'operational' ? 'default' : 'destructive'}>
                                   {light.status === 'operational' ? 'Activo' : 'Mantenimiento'}
                                 </Badge>
                               </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                                  <span className="text-sm">{light.greenTime}s</span>
+                              <div className="grid grid-cols-2 gap-2 mt-3">
+                                <div className="flex items-center gap-2 border border-green-300 bg-green-50 p-2 rounded-md">
+                                  <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                                  <span className="text-sm font-medium">{light.greenTime}s</span>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                                  <span className="text-sm">{light.redTime}s</span>
+                                <div className="flex items-center gap-2 border border-red-300 bg-red-50 p-2 rounded-md">
+                                  <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                                  <span className="text-sm font-medium">{light.redTime}s</span>
                                 </div>
                               </div>
                             </div>
