@@ -1,21 +1,23 @@
-import { useState } from "react";
 
-type ToastProps = {
-  title: string;
+export interface Toast {
+  id: string;
+  title?: string;
   description?: string;
-  variant?: "default" | "destructive";
-};
+  duration?: number;
+}
 
-export function useToast() {
-  const [toasts, setToasts] = useState<ToastProps[]>([]);
+type ToastActionType = (props: Omit<Toast, 'id'>) => void;
 
-  const toast = (props: ToastProps) => {
-    setToasts((prevToasts) => [...prevToasts, props]);
-    console.log(`Toast: ${props.title} - ${props.description || ''}`);
-
-    // Simple way to show toast without relying on complex components
-    alert(`${props.title}\n${props.description || ''}`);
+// Hook simplificado para emitir toasts
+export const useToast = () => {
+  const toast: ToastActionType = (props) => {
+    // Implementación simple que muestra un alert
+    // En una implementación real, esto usaría un sistema de toast UI
+    const message = `${props.title || ''} ${props.description || ''}`;
+    alert(message);
   };
 
-  return { toast, toasts };
-}
+  return {
+    toast
+  };
+};
