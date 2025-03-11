@@ -1,140 +1,122 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { DeviceList } from '@/components/DeviceList';
-import { DeviceForm } from '@/components/DeviceForm';
-import { MapView } from '@/components/MapView';
-import { DataDisplay } from '@/components/DataDisplay';
-import { IotDevice, IotData } from '@shared/schema';
+import React, { useEffect, useState } from 'react';
+import { MapView } from '../components/MapView';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
 
-// New Footer component
-const Footer = () => {
-  return (
-    <footer className="bg-gray-200 p-4 text-center mt-8">
-      <p>&copy; 2023 IoT &amp; Waze Integration</p>
-    </footer>
-  );
-};
+interface SavedView {
+  id: string;
+  center: [number, number];
+  zoom: number;
+  name: string;
+}
 
+const Dashboard: React.FC = () => {
+  const [savedViews, setSavedViews] = useState<SavedView[]>(() => {
+    const saved = localStorage.getItem('savedMapViews');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [devices, setDevices] = useState([]);
 
-export default function Dashboard() {
-  const [devices, setDevices] = useState<IotDevice[]>([]);
-  const [selectedDevice, setSelectedDevice] = useState<IotDevice | null>(null);
-  const [deviceData, setDeviceData] = useState<IotData[]>([]);
-  const [showAddDevice, setShowAddDevice] = useState(false);
-
-  // Fetch devices on component mount
   useEffect(() => {
-    fetchDevices();
+    // Guardar las vistas en localStorage cuando cambien
+    localStorage.setItem('savedMapViews', JSON.stringify(savedViews));
+  }, [savedViews]);
+
+  useEffect(() => {
+    // Cargar los dispositivos IoT
+    fetch('/api/devices')
+      .then(response => response.json())
+      .then(data => setDevices(data))
+      .catch(error => console.error('Error cargando dispositivos:', error));
   }, []);
 
-  // Fetch device data when a device is selected
-  useEffect(() => {
-    if (selectedDevice) {
-      fetchDeviceData(selectedDevice.id);
-    }
-  }, [selectedDevice]);
-
-  const fetchDevices = async () => {
-    try {
-      const response = await fetch('/api/devices');
-      const data = await response.json();
-      setDevices(data);
-    } catch (error) {
-      console.error('Error fetching devices:', error);
-    }
+  const handleSaveView = (view: Omit<SavedView, 'id'>) => {
+    const newView = {
+      ...view,
+      id: Date.now().toString() // Generar un ID único
+    };
+    setSavedViews(prev => [...prev, newView]);
   };
 
-  const fetchDeviceData = async (deviceId: number) => {
-    try {
-      const response = await fetch(`/api/data?deviceId=${deviceId}`);
-      const data = await response.json();
-      setDeviceData(data);
-    } catch (error) {
-      console.error('Error fetching device data:', error);
-    }
-  };
-
-  const handleDeviceSelect = (device: IotDevice) => {
-    setSelectedDevice(device);
-  };
-
-  const handleAddDevice = async (newDevice: any) => {
-    try {
-      const response = await fetch('/api/devices', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newDevice),
-      });
-
-      if (response.ok) {
-        const device = await response.json();
-        setDevices([...devices, device]);
-        setShowAddDevice(false);
-      }
-    } catch (error) {
-      console.error('Error adding device:', error);
-    }
+  const handleDeleteView = (id: string) => {
+    setSavedViews(prev => prev.filter(view => view.id !== id));
   };
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">IoT &amp; Waze Integration Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2">
+          <Card className="h-[500px]">
+            <CardHeader>
+              <CardTitle>Mapa de Ciudad Juárez</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[420px]">
+              <MapView devices={devices} selectedDevice={null} onSaveView={handleSaveView} />
+            </CardContent>
+          </Card>
+        </div>
+
+        <div>
           <Card>
             <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                <span>Devices</span>
-                <Button onClick={() => setShowAddDevice(!showAddDevice)}>
-                  {showAddDevice ? 'Cancel' : 'Add Device'}
-                </Button>
-              </CardTitle>
+              <CardTitle>Vistas Guardadas</CardTitle>
             </CardHeader>
             <CardContent>
-              {showAddDevice ? (
-                <DeviceForm onSubmit={handleAddDevice} />
+              {savedViews.length === 0 ? (
+                <p className="text-muted-foreground">
+                  No hay vistas guardadas. Haz zoom en el mapa y guarda una vista para verla aquí.
+                </p>
               ) : (
-                <DeviceList 
-                  devices={devices} 
-                  selectedDevice={selectedDevice} 
-                  onSelectDevice={handleDeviceSelect} 
-                />
+                <ul className="space-y-3">
+                  {savedViews.map(view => (
+                    <li key={view.id} className="border rounded-lg p-3">
+                      <div className="flex justify-between items-center">
+                        <h3 className="font-medium">{view.name}</h3>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => handleDeleteView(view.id)}
+                        >
+                          Eliminar
+                        </Button>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {view.center[0].toFixed(4)}, {view.center[1].toFixed(4)} (Zoom: {view.zoom})
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>Dispositivos IoT</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {devices.length === 0 ? (
+                <p className="text-muted-foreground">No hay dispositivos registrados.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {devices.map((device: any) => (
+                    <li key={device.id} className="border rounded p-2 text-sm">
+                      <div className="font-medium">{device.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {device.location.lat.toFixed(4)}, {device.location.lng.toFixed(4)}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </CardContent>
           </Card>
         </div>
-
-        <div className="lg:col-span-2">
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Map View</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <MapView 
-                devices={devices} 
-                selectedDevice={selectedDevice} 
-              />
-            </CardContent>
-          </Card>
-
-          {selectedDevice && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Device Data: {selectedDevice.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DataDisplay deviceData={deviceData} />
-              </CardContent>
-            </Card>
-          )}
-        </div>
       </div>
-      {/* Added Footer component */}
-      <Footer />
     </div>
   );
-}
+};
+
+export default Dashboard;

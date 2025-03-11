@@ -8,7 +8,7 @@ import DeviceDetail from './pages/DeviceDetail';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
-// Se eliminó la importación de DevicesPage
+import Dashboard from './pages/Dashboard';
 
 function App() {
   return (
@@ -26,6 +26,7 @@ function App() {
                 {React.createElement(React.lazy(() => import('./pages/CiudadJuarezMap')))}
               </Suspense>
             } />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>

@@ -1,15 +1,20 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { IotDevice } from '@shared/schema';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Button } from './ui/button';
 
 interface MapViewProps {
   devices: IotDevice[];
   selectedDevice: IotDevice | null;
+  onSaveView?: (view: { center: [number, number]; zoom: number; name: string }) => void;
 }
 
-export function MapView({ devices, selectedDevice }: MapViewProps) {
+export function MapView({ devices, selectedDevice, onSaveView }: MapViewProps) {
+  const [currentZoom, setCurrentZoom] = useState<number>(12);
+  const [showSaveButton, setShowSaveButton] = useState<boolean>(false);
+  const [viewName, setViewName] = useState<string>('');
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<{ [key: number]: L.Marker }>({});
@@ -23,6 +28,13 @@ export function MapView({ devices, selectedDevice }: MapViewProps) {
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
+      
+      // Event listener para zoom
+      map.on('zoomend', () => {
+        const zoom = map.getZoom();
+        setCurrentZoom(zoom);
+        setShowSaveButton(zoom >= 15); // Muestra el botón cuando el zoom es mayor o igual a 15
+      });
       
       mapInstanceRef.current = map;
     }
@@ -89,5 +101,44 @@ export function MapView({ devices, selectedDevice }: MapViewProps) {
     }
   }, [selectedDevice]);
 
-  return <div ref={mapRef} className="w-full h-full" />;
+  const handleSaveView = () => {
+    if (mapInstanceRef.current && onSaveView) {
+      const center = mapInstanceRef.current.getCenter();
+      const zoom = mapInstanceRef.current.getZoom();
+      
+      const name = viewName || `Intersección en [${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}]`;
+      
+      onSaveView({
+        center: [center.lat, center.lng],
+        zoom,
+        name
+      });
+      
+      setViewName('');
+      setShowSaveButton(false);
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full">
+      <div ref={mapRef} className="w-full h-full" />
+      
+      {showSaveButton && (
+        <div className="absolute top-4 right-4 bg-white p-3 rounded-lg shadow-md z-[1000]">
+          <div className="mb-2">
+            <input
+              type="text"
+              value={viewName}
+              onChange={(e) => setViewName(e.target.value)}
+              placeholder="Nombre de la vista"
+              className="p-2 w-full border rounded"
+            />
+          </div>
+          <Button onClick={handleSaveView} className="w-full">
+            Guardar esta vista
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 }
