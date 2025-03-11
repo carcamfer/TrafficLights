@@ -1,60 +1,65 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import MapView from '@/components/MapView';
-import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { MapPin, Trash2 } from "lucide-react";
+import MapView from "@/components/MapView";
+import { useToast } from "@/hooks/use-toast";
 
-const Dashboard = () => {
+const Dashboard: React.FC = () => {
   const [captures, setCaptures] = useState<string[]>([]);
+  const { toast } = useToast();
+  
+  // Coordenadas de Ciudad Juárez
+  const center: [number, number] = [31.6904, -106.4245];
+  const zoom = 16;
 
   const handleCapture = (imageData: string) => {
     setCaptures(prev => [...prev, imageData]);
+    toast({
+      title: "Captura guardada",
+      description: "La vista del mapa ha sido guardada correctamente.",
+    });
   };
 
   const handleDeleteCapture = (index: number) => {
     setCaptures(prev => prev.filter((_, i) => i !== index));
+    toast({
+      title: "Captura eliminada",
+      description: "La captura ha sido eliminada correctamente.",
+      variant: "destructive",
+    });
   };
-
-  // Coordenadas de cruces importantes en Ciudad Juárez
-  const intersections = [
-    { name: 'Av. Tecnológico y Av. de las Torres', coords: [31.6686, -106.4258] },
-    { name: 'Av. Paseo Triunfo y Av. Ejército Nacional', coords: [31.7139, -106.4421] },
-    { name: 'Blvd. Zaragoza y Av. de las Torres', coords: [31.6731, -106.3968] }
-  ];
 
   return (
     <div className="container mx-auto py-6">
-      <h1 className="text-3xl font-bold mb-6">Panel de Control de Semáforos</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <Link to="/map">
+          <Button className="flex items-center gap-2">
+            <MapPin size={16} />
+            Ver Mapa Completo
+          </Button>
+        </Link>
+      </div>
 
-      <Tabs defaultValue="map" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="map">Mapa en Vivo</TabsTrigger>
-          <TabsTrigger value="captures">Capturas ({captures.length})</TabsTrigger>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">Vista General</TabsTrigger>
+          <TabsTrigger value="captures">Capturas</TabsTrigger>
+          <TabsTrigger value="settings">Configuración</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="map">
+        <TabsContent value="overview">
           <Card>
             <CardHeader>
-              <CardTitle>Mapa de Ciudad Juárez</CardTitle>
-              <CardDescription>
-                Monitoreo en tiempo real de semáforos inteligentes
-              </CardDescription>
+              <CardTitle>Vista Rápida de Ciudad Juárez</CardTitle>
+              <CardDescription>Visualiza el estado actual de los semáforos</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 gap-6">
-                {intersections.map((intersection, idx) => (
-                  <div key={idx} className="border rounded-lg p-4">
-                    <h3 className="font-medium mb-2">{intersection.name}</h3>
-                    <MapView 
-                      center={intersection.coords as [number, number]} 
-                      zoom={18}
-                      onCapture={handleCapture}
-                    />
-                  </div>
-                ))}
-              </div>
+              <MapView center={center} zoom={zoom} onCapture={handleCapture} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -107,6 +112,33 @@ const Dashboard = () => {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuración</CardTitle>
+              <CardDescription>Gestiona las preferencias de la aplicación</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium">Apariencia</h3>
+                  <p className="text-sm text-gray-500">Personaliza la apariencia de la aplicación</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium">Notificaciones</h3>
+                  <p className="text-sm text-gray-500">Configura las alertas y notificaciones</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium">Datos</h3>
+                  <p className="text-sm text-gray-500">Gestiona el almacenamiento y la sincronización</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

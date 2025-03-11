@@ -1,8 +1,8 @@
 
-import React, { useEffect, useRef } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import html2canvas from 'html2canvas';
+import React, { useEffect, useRef } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import html2canvas from "html2canvas";
 
 interface MapViewProps {
   center: [number, number];
@@ -50,10 +50,16 @@ const MapView: React.FC<MapViewProps> = ({ center, zoom, onCapture }) => {
     if (!mapRef.current || !onCapture) return;
     
     try {
-      const canvas = await html2canvas(mapRef.current, {
+      const mapElement = mapRef.current;
+      const canvas = await html2canvas(mapElement, {
         useCORS: true,
         allowTaint: true,
-        scale: 2
+        scale: 2,
+        logging: true,
+        ignoreElements: (element) => {
+          // Ignorar elementos que puedan causar problemas en la captura
+          return false;
+        }
       });
       
       const image = canvas.toDataURL('image/png');

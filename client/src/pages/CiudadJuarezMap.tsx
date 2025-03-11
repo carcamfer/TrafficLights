@@ -1,14 +1,15 @@
-
+import React from "react";
+import MapView from "@/components/MapView";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useState } from 'react';
-import MapView from '@/components/MapView';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from '@/components/ui/button';
-import { ChevronLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
-const CiudadJuarezMap = () => {
-  // Centro de Ciudad Juárez
-  const cityCenter: [number, number] = [31.6904, -106.4245];
+const CiudadJuarezMap: React.FC = () => {
+  // Coordenadas de Ciudad Juárez
+  const center: [number, number] = [31.6904, -106.4245];
+  const zoom = 18;
   const [captures, setCaptures] = useState<string[]>([]);
 
   const handleCapture = (imageData: string) => {
@@ -20,13 +21,12 @@ const CiudadJuarezMap = () => {
       <div className="flex items-center mb-6">
         <Link to="/dashboard">
           <Button variant="outline" size="sm" className="mr-4">
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Volver
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Regresar al Dashboard
           </Button>
         </Link>
-        <h1 className="text-3xl font-bold">Mapa de Ciudad Juárez</h1>
+        <h1 className="text-2xl font-bold">Mapa de Ciudad Juárez</h1>
       </div>
-
       <Card>
         <CardHeader>
           <CardTitle>Vista General</CardTitle>
@@ -35,9 +35,9 @@ const CiudadJuarezMap = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <MapView 
-            center={cityCenter}
-            zoom={13}
+          <MapView
+            center={center}
+            zoom={zoom}
             onCapture={handleCapture}
           />
         </CardContent>
@@ -53,9 +53,9 @@ const CiudadJuarezMap = () => {
               {captures.map((capture, idx) => (
                 <div key={idx} className="border rounded-lg p-4">
                   <h3 className="font-medium mb-2">Captura #{idx + 1}</h3>
-                  <img 
-                    src={capture} 
-                    alt={`Captura #${idx + 1}`} 
+                  <img
+                    src={capture}
+                    alt={`Captura #${idx + 1}`}
                     className="w-full rounded-md"
                   />
                 </div>
