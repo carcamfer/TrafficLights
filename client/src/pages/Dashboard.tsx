@@ -116,10 +116,14 @@ export default function Dashboard() {
                         <h4 className="font-medium mb-2">Semáforos en esta intersección ({view.trafficLights?.length || 0})</h4>
                         <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto pr-2">
                           {view.trafficLights?.map(light => (
-                            <div key={light.id} className="border p-3 rounded-md">
+                            <div key={light.id} className="border p-3 rounded-md relative">
                               <div className="flex justify-between items-start mb-2">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 bg-amber-200 border border-black flex items-center justify-center" style={{transform: 'rotate(90deg)'}}>
+                                  <div className="w-6 h-12 bg-black border border-white rounded-md flex flex-col items-center justify-between py-1 px-0.5">
+                                    <div className="w-4 h-4 bg-red-600 rounded-full"></div>
+                                    <div className="w-4 h-4 bg-yellow-400 rounded-full"></div>
+                                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                                  </div>)'}}>
                                     <div className="flex flex-col h-full">
                                       <div className="w-3 h-1 bg-red-600 rounded-full"></div>
                                       <div className="w-3 h-1 bg-amber-500 rounded-full"></div>

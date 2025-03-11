@@ -56,21 +56,35 @@ const MapView: React.FC = () => {
           zoom: map.getZoom()
         });
 
-        // Agregar marcadores para los semáforos
+        // Agregar marcadores para los semáforos con un ícono más distintivo
         TRAFFIC_LIGHTS.forEach(light => {
+          // Usar un ícono que se parezca a un semáforo vertical
           const trafficLightIcon = L.divIcon({
-            html: `<div class="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white font-bold">S</div>`,
+            html: `
+              <div class="w-6 h-12 bg-black border-2 border-white rounded-md flex flex-col items-center justify-between p-1" style="box-shadow: 0 0 0 2px rgba(0,0,0,0.2);">
+                <div class="w-4 h-4 bg-red-600 rounded-full"></div>
+                <div class="w-4 h-4 bg-yellow-400 rounded-full"></div>
+                <div class="w-4 h-4 bg-green-500 rounded-full"></div>
+              </div>
+            `,
             className: 'traffic-light-icon',
-            iconSize: [24, 24]
+            iconSize: [24, 48],
+            iconAnchor: [12, 48] // Punto de anclaje en la base del semáforo
           });
 
           L.marker([light.lat, light.lng], { icon: trafficLightIcon })
             .addTo(map)
             .bindPopup(`
               <strong>ID: ${light.deviceId}</strong><br/>
-              Tiempo en verde: ${light.greenTime}s<br/>
-              Tiempo en rojo: ${light.redTime}s<br/>
-              Estado: ${light.status === 'operational' ? 'Operacional' : 'Mantenimiento'}
+              <div class="flex items-center gap-2 mt-1">
+                <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span>Tiempo en verde: ${light.greenTime}s</span>
+              </div>
+              <div class="flex items-center gap-2 mt-1">
+                <div class="w-3 h-3 bg-red-600 rounded-full"></div>
+                <span>Tiempo en rojo: ${light.redTime}s</span>
+              </div>
+              <div class="mt-1">Estado: ${light.status === 'operational' ? 'Operacional' : 'Mantenimiento'}</div>
             `);
         });
       } catch (error) {
@@ -111,33 +125,51 @@ const MapView: React.FC = () => {
           description: "Capturando mapa, por favor espere...",
         });
 
-        // Asegurarse de que todos los tiles se hayan cargado antes de capturar
-        setTimeout(async () => {
-          try {
-            // Mejoradas las opciones de captura para mayor precisión
-            const canvas = await html2canvas(mapElement, {
-              useCORS: true,
-              allowTaint: true,
-              logging: true,
-              scale: 2, // Mayor escala para mejor calidad
-              backgroundColor: null,
-              imageTimeout: 0, // Sin timeout para imágenes
-              onclone: (documentClone) => {
-                // Asegurarse que los elementos del mapa son visibles en el clon
-                const clonedMapElement = documentClone.getElementById('map-container');
-                if (clonedMapElement) {
-                  const allIcons = clonedMapElement.querySelectorAll('.leaflet-marker-icon');
-                  allIcons.forEach(icon => {
-                    if (icon instanceof HTMLElement) {
-                      icon.style.display = 'block';
-                      icon.style.visibility = 'visible';
-                    }
-                  });
-                }
-              }
-            });
+        // Mejorar la visibilidad de los semáforos antes de la captura
+    const trafficLightMarkers = document.querySelectorAll('.traffic-light-icon');
+    trafficLightMarkers.forEach(marker => {
+      if (marker instanceof HTMLElement) {
+        marker.style.zIndex = '1000';
+        marker.style.visibility = 'visible';
+        marker.style.opacity = '1';
+      }
+    });
 
-            const mapImageUrl = canvas.toDataURL('image/png');
+    // Asegurarse de que todos los tiles se hayan cargado antes de capturar
+    setTimeout(async () => {
+      try {
+        // Mejoradas las opciones de captura para mayor precisión
+        const canvas = await html2canvas(mapElement, {
+          useCORS: true,
+          allowTaint: true,
+          logging: true,
+          scale: 2, // Mayor escala para mejor calidad
+          backgroundColor: null,
+          imageTimeout: 0, // Sin timeout para imágenes
+          ignoreElements: (element) => {
+            // Solo ignorar elementos de atribución pero mantener los marcadores
+            return element.classList.contains('leaflet-control-attribution') && !element.classList.contains('traffic-light-icon');
+          },
+          onclone: (documentClone) => {
+            // Asegurarse que los elementos del mapa son visibles en el clon
+            const clonedMapElement = documentClone.getElementById('map-container');
+            if (clonedMapElement) {
+              const allIcons = clonedMapElement.querySelectorAll('.leaflet-marker-icon');
+              allIcons.forEach(icon => {
+                if (icon instanceof HTMLElement) {
+                  icon.style.display = 'block';
+                  icon.style.visibility = 'visible';
+                  icon.style.opacity = '1';
+                  icon.style.zIndex = '1000';
+                  // Aumentar el tamaño para que sea más visible
+                  icon.style.transform = 'scale(1.5)';
+                }
+              });
+            }
+          }
+        });
+
+        const mapImageUrl = canvas.toDataURL('image/png');
 
             // Encontrar semáforos cercanos a la vista actual
             const nearbyTrafficLights = TRAFFIC_LIGHTS.filter(light => {
@@ -168,6 +200,10 @@ const MapView: React.FC = () => {
             };
 
             localStorage.setItem('savedMapViews', JSON.stringify([...savedViews, newView]));
+            
+            toast({
+              title: "Vista guardada",
+              description: `Se ha guardado la intersección "${newView.name}" con ${nearbyTrafficLights.length} semáforos`,View]));
 
             toast({
               title: "Vista guardada",
