@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -6,6 +6,14 @@ interface TrafficLightColors {
   red: string;
   yellow: string;
   green: string;
+}
+
+interface TrafficLight {
+  position: [number, number];
+  state: 'red' | 'yellow' | 'green';
+  id: number;
+  greenTime: number;
+  redTime: number;
 }
 
 interface MapViewProps {
@@ -16,24 +24,38 @@ const MapView: React.FC<MapViewProps> = ({ trafficLightColors }) => {
   // Coordenadas de Ciudad Juárez
   const position: [number, number] = [31.6904, -106.4245];
 
-  // Definir ubicaciones de semáforos de ejemplo
-  const trafficLights = [
+  // Estado para los semáforos
+  const [trafficLights, setTrafficLights] = useState<TrafficLight[]>([
     {
-      position: [31.6904, -106.4245] as [number, number],
+      position: [31.6904, -106.4245],
       state: 'red',
-      id: 1
+      id: 1,
+      greenTime: 30,
+      redTime: 45
     },
     {
-      position: [31.6914, -106.4235] as [number, number],
+      position: [31.6914, -106.4235],
       state: 'green',
-      id: 2
+      id: 2,
+      greenTime: 35,
+      redTime: 50
     },
     {
-      position: [31.6894, -106.4255] as [number, number],
+      position: [31.6894, -106.4255],
       state: 'yellow',
-      id: 3
+      id: 3,
+      greenTime: 25,
+      redTime: 40
     }
-  ];
+  ]);
+
+  const handleTimeChange = (id: number, type: 'greenTime' | 'redTime', value: number) => {
+    setTrafficLights(prevLights =>
+      prevLights.map(light =>
+        light.id === id ? { ...light, [type]: value } : light
+      )
+    );
+  };
 
   return (
     <div className="h-[600px] w-full rounded-lg overflow-hidden shadow-lg">
@@ -56,10 +78,32 @@ const MapView: React.FC<MapViewProps> = ({ trafficLightColors }) => {
                 <h3 className="font-bold">Semáforo #{light.id}</h3>
                 <div className="mt-2">
                   <div 
-                    className="w-4 h-4 rounded-full" 
+                    className="w-4 h-4 rounded-full mb-2" 
                     style={{ backgroundColor: trafficLightColors[light.state] }}
                   />
                   <p>Estado actual: {light.state}</p>
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm">Tiempo en verde (s):</label>
+                      <input
+                        type="number"
+                        min="1"
+                        className="border rounded px-2 py-1 w-20"
+                        value={light.greenTime}
+                        onChange={(e) => handleTimeChange(light.id, 'greenTime', parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm">Tiempo en rojo (s):</label>
+                      <input
+                        type="number"
+                        min="1"
+                        className="border rounded px-2 py-1 w-20"
+                        value={light.redTime}
+                        onChange={(e) => handleTimeChange(light.id, 'redTime', parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </Popup>
