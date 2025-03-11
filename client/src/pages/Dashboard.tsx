@@ -1,199 +1,140 @@
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import MapView from '@/components/MapView';
 
-interface SavedMapView {
+// Interface for traffic light captures
+interface TrafficLightCapture {
   id: number;
-  name: string;
-  lat: number;
-  lng: number;
-  zoom: number;
-  mapImage?: string;
-  trafficLights?: {
-    id: number;
-    deviceId: string;
-    greenTime: number;
-    redTime: number;
-    status: string;
-    lat: number;
-    lng: number;
-  }[];
+  image: string; 
+  location: { lat: number; lng: number };
+  timestamp: Date;
 }
 
-export default function Dashboard() {
-  const [savedViews, setSavedViews] = useState<SavedMapView[]>([]);
-  
-  useEffect(() => {
-    // Cargar vistas guardadas del localStorage
-    const loadedViews = JSON.parse(localStorage.getItem('savedMapViews') || '[]');
-    setSavedViews(loadedViews);
-  }, []);
+const Dashboard: React.FC = () => {
+  const [captures, setCaptures] = useState<TrafficLightCapture[]>([]);
 
-  const handleDeleteView = (id: number) => {
-    const updatedViews = savedViews.filter(view => view.id !== id);
-    setSavedViews(updatedViews);
-    localStorage.setItem('savedMapViews', JSON.stringify(updatedViews));
+  // Handle screenshot captured from MapView
+  const handleScreenshot = (screenshotData: string, location: { lat: number; lng: number }) => {
+    const newCapture: TrafficLightCapture = {
+      id: Date.now(),
+      image: screenshotData,
+      location,
+      timestamp: new Date()
+    };
+
+    setCaptures(prev => [...prev, newCapture]);
+    console.log('Capture added to collection:', newCapture.id);
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-      
-      <Tabs defaultValue="saved-views">
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-6">Traffic Control Dashboard</h1>
+
+      <Tabs defaultValue="map">
         <TabsList className="mb-4">
-          <TabsTrigger value="saved-views">Intersecciones Guardadas</TabsTrigger>
-          <TabsTrigger value="stats">Estadísticas</TabsTrigger>
+          <TabsTrigger value="map">Map View</TabsTrigger>
+          <TabsTrigger value="captures">Traffic Light Captures</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="saved-views">
-          {savedViews.length === 0 ? (
-            <Card>
-              <CardContent className="py-10">
-                <div className="text-center">
-                  <h3 className="text-lg font-medium">No hay intersecciones guardadas</h3>
-                  <p className="text-muted-foreground mt-2">
-                    Ve al mapa y guarda alguna intersección para visualizarla aquí
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {savedViews.map(view => (
-                <Card key={view.id} className="overflow-hidden">
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <CardTitle>{view.name}</CardTitle>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 w-8 p-0" 
-                        onClick={() => handleDeleteView(view.id)}
-                      >
-                        <span className="sr-only">Eliminar</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-trash">
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                      </Button>
-                    </div>
-                    <CardDescription>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        <div className="p-2 bg-muted rounded">
-                          <span className="text-sm font-medium">Latitud:</span>
-                          <span className="text-sm ml-1">{view.lat.toFixed(6)}</span>
-                        </div>
-                        <div className="p-2 bg-muted rounded">
-                          <span className="text-sm font-medium">Longitud:</span>
-                          <span className="text-sm ml-1">{view.lng.toFixed(6)}</span>
-                        </div>
-                        <div className="p-2 bg-muted rounded">
-                          <span className="text-sm font-medium">Zoom:</span>
-                          <span className="text-sm ml-1">{view.zoom}</span>
-                        </div>
-                      </div>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {view.mapImage && (
-                        <div className="border rounded-md overflow-hidden h-[200px] bg-muted relative">
-                          <img 
-                            src={view.mapImage} 
-                            alt={`Vista de ${view.name}`} 
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = 'https://placehold.co/600x400/EEE/31343C?text=Vista+no+disponible';
-                            }}
-                          />
-                        </div>
-                      )}
-                      
-                      <div>
-                        <h4 className="font-medium mb-2">Semáforos en esta intersección ({view.trafficLights?.length || 0})</h4>
-                        <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto pr-2">
-                          {view.trafficLights?.map(light => (
-                            <div key={light.id} className="border p-3 rounded-md relative">
-                              <div className="flex justify-between items-start mb-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-12 bg-black border border-white rounded-md flex flex-col items-center justify-between py-1 px-0.5">
-                                    <div className="w-4 h-4 bg-red-600 rounded-full"></div>
-                                    <div className="w-4 h-4 bg-yellow-400 rounded-full"></div>
-                                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                                  </div>)'}}>
-                                    <div className="flex flex-col h-full">
-                                      <div className="w-3 h-1 bg-red-600 rounded-full"></div>
-                                      <div className="w-3 h-1 bg-amber-500 rounded-full"></div>
-                                      <div className="w-3 h-1 bg-green-600 rounded-full"></div>
-                                    </div>
-                                  </div>
-                                  <span className="font-medium">{light.deviceId}</span>
-                                </div>
-                                <Badge variant={light.status === 'operational' ? 'default' : 'destructive'}>
-                                  {light.status === 'operational' ? 'Activo' : 'Mantenimiento'}
-                                </Badge>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2 mt-3">
-                                <div className="flex items-center gap-2 border border-green-300 bg-green-50 p-2 rounded-md">
-                                  <div className="w-4 h-4 rounded-full bg-green-500"></div>
-                                  <span className="text-sm font-medium">{light.greenTime}s</span>
-                                </div>
-                                <div className="flex items-center gap-2 border border-red-300 bg-red-50 p-2 rounded-md">
-                                  <div className="w-4 h-4 rounded-full bg-red-500"></div>
-                                  <span className="text-sm font-medium">{light.redTime}s</span>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+
+        <TabsContent value="map">
+          <Card>
+            <CardHeader>
+              <CardTitle>Interactive Map</CardTitle>
+              <CardDescription>
+                Click on the map to add traffic lights and capture snapshots.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MapView onScreenshot={handleScreenshot} />
+            </CardContent>
+          </Card>
         </TabsContent>
-        
-        <TabsContent value="stats">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Semáforos totales</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-4xl font-bold">{
-                  Array.from(new Set(
-                    savedViews.flatMap(view => view.trafficLights?.map(light => light.deviceId) || [])
-                  )).length
-                }</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Intersecciones guardadas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-4xl font-bold">{savedViews.length}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Estado de red</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span className="font-medium">Sistema operativo</span>
+
+        <TabsContent value="captures">
+          <Card>
+            <CardHeader>
+              <CardTitle>Traffic Light Captures</CardTitle>
+              <CardDescription>
+                {captures.length 
+                  ? `${captures.length} traffic light locations captured` 
+                  : 'No captures yet. Go to the Map View tab to capture traffic lights.'
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {captures.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {captures.map((capture) => (
+                    <div key={capture.id} className="border rounded-lg overflow-hidden shadow-sm">
+                      <div className="p-2 bg-secondary text-secondary-foreground text-sm">
+                        Traffic Light at {capture.location.lat.toFixed(4)}, {capture.location.lng.toFixed(4)}
+                      </div>
+
+                      <div className="relative aspect-video bg-muted">
+                        {capture.image ? (
+                          <img 
+                            src={capture.image} 
+                            alt={`Traffic light at ${capture.location.lat.toFixed(4)}, ${capture.location.lng.toFixed(4)}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-full">
+                            Image not available
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-3">
+                        <div className="grid grid-cols-3 gap-2 text-sm">
+                          <div className="bg-green-100 p-2 rounded text-center">
+                            <span className="block font-semibold">Green</span>
+                            <span>30s</span>
+                          </div>
+                          <div className="bg-red-100 p-2 rounded text-center">
+                            <span className="block font-semibold">Red</span>
+                            <span>45s</span>
+                          </div>
+                          <div className="bg-blue-100 p-2 rounded text-center">
+                            <span className="block font-semibold">Status</span>
+                            <span>Online</span>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          Captured on: {capture.timestamp.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  No traffic light captures available. Go to the Map tab and click on traffic light locations.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <Card>
+            <CardHeader>
+              <CardTitle>Traffic Analytics</CardTitle>
+              <CardDescription>
+                Traffic flow and pattern analysis
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-96 flex items-center justify-center bg-muted rounded-lg">
+                Analytics dashboard coming soon
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
   );
-}
+};
+
+export default Dashboard;
