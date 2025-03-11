@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import MapView from './components/MapView';
-import TrafficLight from './components/TrafficLight';
 import TrafficLightControl from './components/TrafficLightControl';
 
 interface TrafficLightData {
@@ -12,12 +11,6 @@ interface TrafficLightData {
 }
 
 function App() {
-  const [colors, setColors] = useState({
-    red: '#ff0000',
-    yellow: '#ffff00',
-    green: '#00ff00'
-  });
-
   const [trafficLights, setTrafficLights] = useState<TrafficLightData[]>([
     {
       id: 1,
@@ -42,13 +35,6 @@ function App() {
     }
   ]);
 
-  const handleColorChange = (type: 'red' | 'yellow' | 'green', color: string) => {
-    setColors(prev => ({
-      ...prev,
-      [type]: color
-    }));
-  };
-
   const handleTimeChange = (id: number, type: 'greenTime' | 'redTime', value: number) => {
     setTrafficLights(prev =>
       prev.map(light =>
@@ -67,18 +53,9 @@ function App() {
       <main className="max-w-7xl mx-auto py-6 px-4">
         <div className="flex gap-6">
           <div className="flex-1">
-            <MapView trafficLights={trafficLights} trafficLightColors={colors} />
+            <MapView trafficLights={trafficLights} />
           </div>
-          <div className="w-80 space-y-6">
-            <div className="bg-white p-4 rounded-lg shadow">
-              <h2 className="text-lg font-semibold mb-4">Personalizar Colores</h2>
-              <TrafficLight
-                redColor={colors.red}
-                yellowColor={colors.yellow}
-                greenColor={colors.green}
-                onColorChange={handleColorChange}
-              />
-            </div>
+          <div className="w-80">
             <div className="bg-white p-4 rounded-lg shadow">
               <h2 className="text-lg font-semibold mb-4">Control de Tiempos</h2>
               {trafficLights.map(light => (

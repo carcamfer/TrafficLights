@@ -2,12 +2,6 @@ import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
-interface TrafficLightColors {
-  red: string;
-  yellow: string;
-  green: string;
-}
-
 interface TrafficLight {
   position: [number, number];
   state: 'red' | 'yellow' | 'green';
@@ -18,10 +12,16 @@ interface TrafficLight {
 
 interface MapViewProps {
   trafficLights: TrafficLight[];
-  trafficLightColors: TrafficLightColors;
 }
 
-const MapView: React.FC<MapViewProps> = ({ trafficLightColors, trafficLights }) => {
+const MapView: React.FC<MapViewProps> = ({ trafficLights }) => {
+  // Colores fijos para los estados de los semáforos
+  const stateColors = {
+    red: '#ff0000',
+    yellow: '#ffff00',
+    green: '#00ff00'
+  };
+
   return (
     <div className="h-[600px] w-full rounded-lg overflow-hidden shadow-lg">
       <MapContainer 
@@ -44,7 +44,7 @@ const MapView: React.FC<MapViewProps> = ({ trafficLightColors, trafficLights }) 
                 <div className="mt-2">
                   <div 
                     className="w-4 h-4 rounded-full mb-2" 
-                    style={{ backgroundColor: trafficLightColors[light.state] }}
+                    style={{ backgroundColor: stateColors[light.state] }}
                   />
                   <p>Estado actual: {light.state}</p>
                 </div>
