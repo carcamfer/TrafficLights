@@ -6,7 +6,7 @@ import html2canvas from 'html2canvas';
 
 // Definir icono de semáforo
 const trafficLightIcon = new L.Icon({
-  iconUrl: '/attached_assets/semaforo.PNG',
+  iconUrl: '../../../attached_assets/semaforo.PNG',
   iconSize: [25, 25],
   iconAnchor: [12, 12],
   popupAnchor: [0, -10]
@@ -81,8 +81,7 @@ const MapView: React.FC<MapViewProps> = ({ center, zoom, onCapture }) => {
 
     html2canvas(mapContainerRef.current).then(canvas => {
       const imageData = canvas.toDataURL('image/png');
-      onCapture(imageData);
-
+      
       // Crear elementos de información de semáforos para mostrar junto a la captura
       const trafficLightInfo = trafficLights.map(light => ({
         id: light.id,
@@ -91,11 +90,10 @@ const MapView: React.FC<MapViewProps> = ({ center, zoom, onCapture }) => {
         deviceId: light.deviceId
       }));
 
-      // Pasar información de semáforos junto con la captura
-      if (onCapture) {
-        onCapture(imageData);
-      }
+      // Pasar la imagen capturada
+      onCapture(imageData);
     });
+  };);
   };
 
   return (
