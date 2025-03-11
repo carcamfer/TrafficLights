@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DeviceList } from '@/components/DeviceList';
 import { IotDevice } from '@shared/schema';
-import NavBar from '@/components/NavBar';
+//Removed NavBar import to prevent duplication
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { DeviceForm } from '@/components/DeviceForm';
@@ -24,18 +23,18 @@ export default function DevicesPage() {
     try {
       setLoading(true);
       const response = await fetch('/api/devices');
-      
+
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
       }
-      
+
       const data = await response.json();
       setDevices(data);
       setError(null);
     } catch (error) {
       console.error('Error fetching devices:', error);
       setError('No se pudieron cargar los dispositivos. Usando datos de muestra.');
-      
+
       // Datos de muestra en caso de error
       setDevices([
         {
@@ -99,17 +98,17 @@ export default function DevicesPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <NavBar />
-      
+      {/* NavBar removed to fix duplication */}
+
       <main className="flex-grow container mx-auto p-4">
         <h1 className="text-3xl font-bold mb-6">Dispositivos IoT</h1>
-        
+
         {error && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6">
             <p>{error}</p>
           </div>
         )}
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
             <Card>
@@ -136,7 +135,7 @@ export default function DevicesPage() {
               </CardContent>
             </Card>
           </div>
-          
+
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
@@ -151,7 +150,7 @@ export default function DevicesPage() {
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );
