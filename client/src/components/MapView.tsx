@@ -1,144 +1,183 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { IotDevice } from '@shared/schema';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Button } from './ui/button';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./ui/alert-dialog";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+
+// Corregir el problema con los iconos de Leaflet
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+});
 
 interface MapViewProps {
-  devices: IotDevice[];
-  selectedDevice: IotDevice | null;
-  onSaveView?: (view: { center: [number, number]; zoom: number; name: string }) => void;
+  devices?: any[];
+  selectedDevice?: any;
+  onSaveView?: (view: SavedView) => void;
 }
 
-export function MapView({ devices, selectedDevice, onSaveView }: MapViewProps) {
-  const [currentZoom, setCurrentZoom] = useState<number>(12);
-  const [showSaveButton, setShowSaveButton] = useState<boolean>(false);
-  const [viewName, setViewName] = useState<string>('');
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<{ [key: number]: L.Marker }>({});
+export interface SavedView {
+  id: string;
+  name: string;
+  description: string;
+  lat: number;
+  lng: number;
+  zoom: number;
+  timestamp: string;
+}
 
+const MapView: React.FC<MapViewProps> = ({ devices = [], selectedDevice, onSaveView }) => {
+  const mapRef = useRef<L.Map | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [currentView, setCurrentView] = useState<{lat: number, lng: number, zoom: number} | null>(null);
+  const [viewName, setViewName] = useState('');
+  const [viewDescription, setViewDescription] = useState('');
+  
   useEffect(() => {
-    // Initialize map if it doesn't exist
-    if (mapRef.current && !mapInstanceRef.current) {
-      // Configuración inicial del mapa centrada en Ciudad Juárez
-      const map = L.map(mapRef.current).setView([31.7300, -106.4850], 12);
+    if (mapContainerRef.current && !mapRef.current) {
+      // Inicializar el mapa con la vista de Ciudad Juárez
+      const map = L.map(mapContainerRef.current).setView([31.6904, -106.4245], 13);
       
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
       
-      // Event listener para zoom
-      map.on('zoomend', () => {
-        const zoom = map.getZoom();
-        setCurrentZoom(zoom);
-        setShowSaveButton(zoom >= 15); // Muestra el botón cuando el zoom es mayor o igual a 15
+      mapRef.current = map;
+      
+      // Agregar eventos para actualizar la vista actual
+      map.on('moveend zoomend', () => {
+        const center = map.getCenter();
+        setCurrentView({
+          lat: center.lat,
+          lng: center.lng,
+          zoom: map.getZoom()
+        });
       });
       
-      mapInstanceRef.current = map;
+      // Inicializar la vista actual
+      const center = map.getCenter();
+      setCurrentView({
+        lat: center.lat,
+        lng: center.lng,
+        zoom: map.getZoom()
+      });
+    }
+    
+    // Agregar marcadores para dispositivos si existen
+    if (mapRef.current && devices.length > 0) {
+      devices.forEach(device => {
+        if (device.latitude && device.longitude) {
+          const marker = L.marker([device.latitude, device.longitude])
+            .addTo(mapRef.current!)
+            .bindPopup(`<b>${device.name}</b><br>${device.description || ''}`);
+          
+          if (selectedDevice && selectedDevice.id === device.id) {
+            marker.openPopup();
+            mapRef.current!.setView([device.latitude, device.longitude], 15);
+          }
+        }
+      });
     }
     
     return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
       }
     };
-  }, []);
-
-  // Update markers when devices change
-  useEffect(() => {
-    if (!mapInstanceRef.current) return;
-    
-    const map = mapInstanceRef.current;
-    
-    // Clear existing markers
-    Object.values(markersRef.current).forEach(marker => {
-      marker.remove();
-    });
-    markersRef.current = {};
-    
-    // Add markers for all devices
-    devices.forEach(device => {
-      const { lat, lng } = device.location;
-      
-      const marker = L.marker([lat, lng])
-        .addTo(map)
-        .bindPopup(`<b>${device.name}</b><br>EUI: ${device.deviceEUI}`);
-      
-      markersRef.current[device.id] = marker;
-    });
-    
-    // If we have devices, fit bounds to show all of them
-    if (devices.length > 0) {
-      const bounds = L.latLngBounds(devices.map(d => [d.location.lat, d.location.lng]));
-      map.fitBounds(bounds, { padding: [50, 50] });
-    }
-  }, [devices]);
+  }, [devices, selectedDevice]);
   
-  // Update selected marker
-  useEffect(() => {
-    if (!mapInstanceRef.current || !selectedDevice) return;
-    
-    // Reset all markers
-    Object.values(markersRef.current).forEach(marker => {
-      marker.setIcon(L.icon({
-        iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-        shadowSize: [41, 41]
-      }));
-    });
-    
-    // Highlight selected marker
-    const selectedMarker = markersRef.current[selectedDevice.id];
-    if (selectedMarker) {
-      selectedMarker.openPopup();
-      // Note: For a custom highlight we would need to define a custom icon
-    }
-  }, [selectedDevice]);
-
   const handleSaveView = () => {
-    if (mapInstanceRef.current && onSaveView) {
-      const center = mapInstanceRef.current.getCenter();
-      const zoom = mapInstanceRef.current.getZoom();
+    if (currentView && onSaveView) {
+      const savedView: SavedView = {
+        id: `view-${Date.now()}`,
+        name: viewName || `Vista ${new Date().toLocaleTimeString()}`,
+        description: viewDescription || 'Punto de interés en Ciudad Juárez',
+        lat: currentView.lat,
+        lng: currentView.lng,
+        zoom: currentView.zoom,
+        timestamp: new Date().toISOString()
+      };
       
-      const name = viewName || `Intersección en [${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}]`;
-      
-      onSaveView({
-        center: [center.lat, center.lng],
-        zoom,
-        name
-      });
-      
+      onSaveView(savedView);
       setViewName('');
-      setShowSaveButton(false);
+      setViewDescription('');
     }
   };
-
+  
   return (
-    <div className="relative w-full h-full">
-      <div ref={mapRef} className="w-full h-full" />
+    <div className="relative h-full w-full">
+      <div ref={mapContainerRef} className="h-full w-full rounded-md"></div>
       
-      {showSaveButton && (
-        <div className="absolute top-4 right-4 bg-white p-3 rounded-lg shadow-md z-[1000]">
-          <div className="mb-2">
-            <input
-              type="text"
-              value={viewName}
-              onChange={(e) => setViewName(e.target.value)}
-              placeholder="Nombre de la vista"
-              className="p-2 w-full border rounded"
-            />
-          </div>
-          <Button onClick={handleSaveView} className="w-full">
-            Guardar esta vista
-          </Button>
-        </div>
+      {currentView && currentView.zoom >= 15 && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button 
+              className="absolute bottom-4 right-4 z-[1000]"
+              variant="default"
+            >
+              Guardar esta vista
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Guardar vista del mapa</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta vista se guardará en tu dashboard para monitoreo. Puedes asignarle un nombre y descripción.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Nombre
+                </Label>
+                <Input
+                  id="name"
+                  value={viewName}
+                  onChange={(e) => setViewName(e.target.value)}
+                  placeholder="Intersección Principal"
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Descripción
+                </Label>
+                <Input
+                  id="description"
+                  value={viewDescription}
+                  onChange={(e) => setViewDescription(e.target.value)}
+                  placeholder="Punto de monitoreo para tráfico"
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleSaveView}>Guardar</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );
-}
+};
+
+export default MapView;

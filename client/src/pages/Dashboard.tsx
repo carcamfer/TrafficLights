@@ -1,120 +1,155 @@
-import React, { useEffect, useState } from 'react';
-import { MapView } from '../components/MapView';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
 
-interface SavedView {
-  id: string;
-  center: [number, number];
-  zoom: number;
-  name: string;
-}
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { SavedView } from '@/components/MapView';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
 
 const Dashboard: React.FC = () => {
-  const [savedViews, setSavedViews] = useState<SavedView[]>(() => {
-    const saved = localStorage.getItem('savedMapViews');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [devices, setDevices] = useState([]);
-
+  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  const [selectedView, setSelectedView] = useState<SavedView | null>(null);
+  
+  // Cargar vistas guardadas del localStorage
   useEffect(() => {
-    // Guardar las vistas en localStorage cuando cambien
+    const storedViews = localStorage.getItem('savedMapViews');
+    if (storedViews) {
+      setSavedViews(JSON.parse(storedViews));
+    }
+  }, []);
+  
+  // Guardar vistas en localStorage cuando cambian
+  useEffect(() => {
     localStorage.setItem('savedMapViews', JSON.stringify(savedViews));
   }, [savedViews]);
-
-  useEffect(() => {
-    // Cargar los dispositivos IoT
-    fetch('/api/devices')
-      .then(response => response.json())
-      .then(data => setDevices(data))
-      .catch(error => console.error('Error cargando dispositivos:', error));
-  }, []);
-
-  const handleSaveView = (view: Omit<SavedView, 'id'>) => {
-    const newView = {
-      ...view,
-      id: Date.now().toString() // Generar un ID único
-    };
-    setSavedViews(prev => [...prev, newView]);
-  };
-
+  
   const handleDeleteView = (id: string) => {
-    setSavedViews(prev => prev.filter(view => view.id !== id));
+    setSavedViews(views => views.filter(view => view.id !== id));
   };
-
+  
+  // Ejemplos de datos de tráfico (simulados)
+  const trafficData = {
+    congestionLevel: 'Moderado',
+    averageSpeed: '35 km/h',
+    incidentsToday: 2,
+    activeAlerts: 1
+  };
+  
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
-          <Card className="h-[500px]">
-            <CardHeader>
-              <CardTitle>Mapa de Ciudad Juárez</CardTitle>
-            </CardHeader>
-            <CardContent className="h-[420px]">
-              <MapView devices={devices} selectedDevice={null} onSaveView={handleSaveView} />
-            </CardContent>
-          </Card>
-        </div>
-
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Vistas Guardadas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {savedViews.length === 0 ? (
-                <p className="text-muted-foreground">
-                  No hay vistas guardadas. Haz zoom en el mapa y guarda una vista para verla aquí.
-                </p>
-              ) : (
-                <ul className="space-y-3">
-                  {savedViews.map(view => (
-                    <li key={view.id} className="border rounded-lg p-3">
-                      <div className="flex justify-between items-center">
-                        <h3 className="font-medium">{view.name}</h3>
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => handleDeleteView(view.id)}
-                        >
-                          Eliminar
-                        </Button>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {view.center[0].toFixed(4)}, {view.center[1].toFixed(4)} (Zoom: {view.zoom})
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle>Dispositivos IoT</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {devices.length === 0 ? (
-                <p className="text-muted-foreground">No hay dispositivos registrados.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {devices.map((device: any) => (
-                    <li key={device.id} className="border rounded p-2 text-sm">
-                      <div className="font-medium">{device.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {device.location.lat.toFixed(4)}, {device.location.lng.toFixed(4)}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+    <div className="container mx-auto py-8">
+      <h1 className="text-3xl font-bold mb-6">Dashboard de Monitoreo de Tráfico</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Nivel de Congestión</CardTitle>
+            <CardDescription>Estado actual general</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{trafficData.congestionLevel}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Velocidad Promedio</CardTitle>
+            <CardDescription>En vías principales</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{trafficData.averageSpeed}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Incidentes hoy</CardTitle>
+            <CardDescription>Reportados en Ciudad Juárez</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{trafficData.incidentsToday}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Alertas Activas</CardTitle>
+            <CardDescription>Requieren atención</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{trafficData.activeAlerts}</div>
+          </CardContent>
+        </Card>
       </div>
+      
+      <h2 className="text-2xl font-bold mb-4">Puntos de Monitoreo Guardados</h2>
+      
+      {savedViews.length === 0 ? (
+        <Card className="mb-8">
+          <CardContent className="pt-6 text-center">
+            <p className="mb-4">No has guardado ninguna vista del mapa todavía.</p>
+            <Link to="/mapa">
+              <Button>Ir al Mapa para Guardar Vistas</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {savedViews.map(view => (
+            <Card key={view.id} className="overflow-hidden">
+              <div 
+                className="h-40 bg-muted bg-cover bg-center"
+                style={{ 
+                  backgroundImage: `url(https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/${view.lng},${view.lat},${view.zoom},0/300x200?access_token=pk.eyJ1IjoiZXhhbXBsZXVzZXIiLCJhIjoiY2xzaDk5Y3AyMXAzZzJrcGl1ZTd0b2tzcyJ9.example)` 
+                }}
+              ></div>
+              <CardHeader>
+                <CardTitle>{view.name}</CardTitle>
+                <CardDescription>
+                  {view.description}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Guardado el {new Date(view.timestamp).toLocaleDateString()} a las {new Date(view.timestamp).toLocaleTimeString()}
+                </p>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <Link to={`/mapa?lat=${view.lat}&lng=${view.lng}&zoom=${view.zoom}`}>
+                  <Button variant="outline">Ver en Mapa</Button>
+                </Link>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="text-destructive">Eliminar</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta acción no se puede deshacer. Se eliminará permanentemente esta vista guardada.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDeleteView(view.id)}>Eliminar</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

@@ -1,37 +1,61 @@
-import React, { useEffect, useRef } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import MapView, { SavedView } from '@/components/MapView';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 
 const CiudadJuarezMap: React.FC = () => {
-  const mapRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!mapRef.current) return;
-
-    // Initialize the map
-    const map = L.map(mapRef.current).setView([31.6904, -106.4245], 12);
-
-    // Add OpenStreetMap tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
-
-    // Example marker
-    L.marker([31.6904, -106.4245])
-      .addTo(map)
-      .bindPopup('Ciudad Juárez, Mexico')
-      .openPopup();
-
-    // Clean up on unmount
-    return () => {
-      map.remove();
-    };
-  }, []);
-
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+  
+  // Obtener parámetros de URL si existen
+  const initialLat = searchParams.get('lat') ? parseFloat(searchParams.get('lat')!) : undefined;
+  const initialLng = searchParams.get('lng') ? parseFloat(searchParams.get('lng')!) : undefined;
+  const initialZoom = searchParams.get('zoom') ? parseInt(searchParams.get('zoom')!) : undefined;
+  
+  const handleSaveView = (view: SavedView) => {
+    // Obtener vistas existentes
+    const existingViews = localStorage.getItem('savedMapViews');
+    let savedViews: SavedView[] = [];
+    
+    if (existingViews) {
+      savedViews = JSON.parse(existingViews);
+    }
+    
+    // Agregar nueva vista
+    const updatedViews = [...savedViews, view];
+    
+    // Guardar en localStorage
+    localStorage.setItem('savedMapViews', JSON.stringify(updatedViews));
+    
+    // Mostrar notificación
+    toast({
+      title: "Vista guardada",
+      description: `La vista "${view.name}" se ha guardado en tu dashboard.`,
+    });
+  };
+  
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Ciudad Juárez Map</h1>
-      <div ref={mapRef} className="map-container rounded-lg shadow-lg" />
+    <div className="container mx-auto py-8">
+      <h1 className="text-3xl font-bold mb-6">Mapa de Ciudad Juárez</h1>
+      
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Vista en tiempo real</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[600px]">
+            <MapView 
+              onSaveView={handleSaveView} 
+              initialView={initialLat && initialLng ? { lat: initialLat, lng: initialLng, zoom: initialZoom || 15 } : undefined}
+            />
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Toaster />
     </div>
   );
 };
