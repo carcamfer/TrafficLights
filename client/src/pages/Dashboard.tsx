@@ -3,51 +3,51 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import MapView from '@/components/MapView';
 
-// Interface for traffic light captures
-interface TrafficLightCapture {
-  id: number;
-  image: string; 
-  location: { lat: number; lng: number };
-  timestamp: Date;
-}
+const Dashboard = () => {
+  const [captures, setCaptures] = useState<string[]>([]);
 
-const Dashboard: React.FC = () => {
-  const [captures, setCaptures] = useState<TrafficLightCapture[]>([]);
-
-  // Handle screenshot captured from MapView
-  const handleScreenshot = (screenshotData: string, location: { lat: number; lng: number }) => {
-    const newCapture: TrafficLightCapture = {
-      id: Date.now(),
-      image: screenshotData,
-      location,
-      timestamp: new Date()
-    };
-
-    setCaptures(prev => [...prev, newCapture]);
-    console.log('Capture added to collection:', newCapture.id);
+  const handleCapture = (imageData: string) => {
+    setCaptures(prev => [...prev, imageData]);
   };
 
-  return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Traffic Control Dashboard</h1>
+  // Coordenadas de cruces importantes en Ciudad Juárez
+  const intersections = [
+    { name: 'Av. Tecnológico y Av. de las Torres', coords: [31.6686, -106.4258] },
+    { name: 'Av. Paseo Triunfo y Av. Ejército Nacional', coords: [31.7139, -106.4421] },
+    { name: 'Blvd. Zaragoza y Av. de las Torres', coords: [31.6731, -106.3968] }
+  ];
 
-      <Tabs defaultValue="map">
+  return (
+    <div className="container mx-auto py-6">
+      <h1 className="text-3xl font-bold mb-6">Panel de Control de Semáforos</h1>
+
+      <Tabs defaultValue="map" className="w-full">
         <TabsList className="mb-4">
-          <TabsTrigger value="map">Map View</TabsTrigger>
-          <TabsTrigger value="captures">Traffic Light Captures</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="map">Mapa en Vivo</TabsTrigger>
+          <TabsTrigger value="captures">Capturas ({captures.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="map">
           <Card>
             <CardHeader>
-              <CardTitle>Interactive Map</CardTitle>
+              <CardTitle>Mapa de Ciudad Juárez</CardTitle>
               <CardDescription>
-                Click on the map to add traffic lights and capture snapshots.
+                Monitoreo en tiempo real de semáforos inteligentes
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <MapView onScreenshot={handleScreenshot} />
+              <div className="grid grid-cols-1 gap-6">
+                {intersections.map((intersection, idx) => (
+                  <div key={idx} className="border rounded-lg p-4">
+                    <h3 className="font-medium mb-2">{intersection.name}</h3>
+                    <MapView 
+                      center={intersection.coords as [number, number]} 
+                      zoom={18}
+                      onCapture={handleCapture}
+                    />
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -55,80 +55,38 @@ const Dashboard: React.FC = () => {
         <TabsContent value="captures">
           <Card>
             <CardHeader>
-              <CardTitle>Traffic Light Captures</CardTitle>
-              <CardDescription>
-                {captures.length 
-                  ? `${captures.length} traffic light locations captured` 
-                  : 'No captures yet. Go to the Map View tab to capture traffic lights.'
-                }
-              </CardDescription>
+              <CardTitle>Capturas Guardadas</CardTitle>
+              <CardDescription>Visualizaciones capturadas para análisis</CardDescription>
             </CardHeader>
             <CardContent>
-              {captures.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {captures.map((capture) => (
-                    <div key={capture.id} className="border rounded-lg overflow-hidden shadow-sm">
-                      <div className="p-2 bg-secondary text-secondary-foreground text-sm">
-                        Traffic Light at {capture.location.lat.toFixed(4)}, {capture.location.lng.toFixed(4)}
-                      </div>
-
-                      <div className="relative aspect-video bg-muted">
-                        {capture.image ? (
-                          <img 
-                            src={capture.image} 
-                            alt={`Traffic light at ${capture.location.lat.toFixed(4)}, ${capture.location.lng.toFixed(4)}`}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex items-center justify-center h-full">
-                            Image not available
+              {captures.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No hay capturas guardadas. Haz clic en "Capturar Vista" en el mapa para guardar una visualización.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {captures.map((capture, idx) => (
+                    <div key={idx} className="border rounded-lg p-4">
+                      <h3 className="font-medium mb-2">Captura #{idx + 1}</h3>
+                      <div className="relative">
+                        <img 
+                          src={capture} 
+                          alt={`Captura #${idx + 1}`} 
+                          className="w-full rounded-md"
+                        />
+                        <div className="absolute top-2 right-2 bg-white p-2 rounded-md shadow-md">
+                          <div className="text-xs">
+                            <p className="font-bold">Semáforo #{idx + 1}</p>
+                            <p>Verde: 30s</p>
+                            <p>Rojo: 45s</p>
+                            <p>Dispositivo: Conectado</p>
                           </div>
-                        )}
-                      </div>
-
-                      <div className="p-3">
-                        <div className="grid grid-cols-3 gap-2 text-sm">
-                          <div className="bg-green-100 p-2 rounded text-center">
-                            <span className="block font-semibold">Green</span>
-                            <span>30s</span>
-                          </div>
-                          <div className="bg-red-100 p-2 rounded text-center">
-                            <span className="block font-semibold">Red</span>
-                            <span>45s</span>
-                          </div>
-                          <div className="bg-blue-100 p-2 rounded text-center">
-                            <span className="block font-semibold">Status</span>
-                            <span>Online</span>
-                          </div>
-                        </div>
-                        <div className="mt-2 text-xs text-muted-foreground">
-                          Captured on: {capture.timestamp.toLocaleString()}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  No traffic light captures available. Go to the Map tab and click on traffic light locations.
-                </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analytics">
-          <Card>
-            <CardHeader>
-              <CardTitle>Traffic Analytics</CardTitle>
-              <CardDescription>
-                Traffic flow and pattern analysis
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-96 flex items-center justify-center bg-muted rounded-lg">
-                Analytics dashboard coming soon
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
