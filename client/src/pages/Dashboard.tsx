@@ -81,49 +81,71 @@ const Dashboard: React.FC = () => {
                 <CardDescription>Coordenadas: {view.lat.toFixed(6)}, {view.lng.toFixed(6)}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {view.mapImage && (
-                  <div className="border rounded-md overflow-hidden">
+                {view.mapImage ? (
+                  <div className="w-full h-40 bg-muted rounded-md overflow-hidden mb-4 relative">
                     <img 
                       src={view.mapImage} 
                       alt={`Vista de ${view.name}`} 
-                      className="w-full h-auto"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.error("Error al cargar la imagen");
+                        e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24'%3E%3Cpath fill='%23ccc' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z'/%3E%3C/svg%3E";
+                      }}
                     />
                   </div>
+                ) : (
+                  <div className="w-full h-40 bg-muted rounded-md overflow-hidden mb-4 flex items-center justify-center">
+                    <span className="text-muted-foreground">Sin imagen disponible</span>
+                  </div>
                 )}
-                
-                {view.trafficLights && view.trafficLights.length > 0 ? (
-                  <div className="space-y-4">
-                    <h3 className="font-semibold">Semáforos en esta intersección</h3>
-                    <div className="grid grid-cols-1 gap-4">
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  <div className="p-2 bg-muted rounded">
+                    <span className="text-sm font-medium">Latitud:</span>
+                    <span className="text-sm ml-1">{view.lat.toFixed(6)}</span>
+                  </div>
+                  <div className="p-2 bg-muted rounded">
+                    <span className="text-sm font-medium">Longitud:</span>
+                    <span className="text-sm ml-1">{view.lng.toFixed(6)}</span>
+                  </div>
+                  <div className="p-2 bg-muted rounded">
+                    <span className="text-sm font-medium">Zoom:</span>
+                    <span className="text-sm ml-1">{view.zoom}</span>
+                  </div>
+                </div>
+
+                {view.trafficLights && view.trafficLights.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-semibold mb-2">Semáforos en esta intersección:</h4>
+                    <div className="space-y-3">
                       {view.trafficLights.map(light => (
-                        <div key={light.id} className="border rounded-md p-4 bg-card">
+                        <div key={light.id} className="border rounded-md p-3">
                           <div className="flex items-center justify-between mb-2">
-                            <div className="font-medium">Dispositivo: {light.deviceId}</div>
-                            <div className={`text-xs px-2 py-1 rounded ${light.status === 'online' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                              {light.status === 'online' ? 'En línea' : 'Desconectado'}
+                            <span className="font-medium">ID: {light.deviceId}</span>
+                            <span className={`text-xs px-2 py-1 rounded-full ${light.status === 'online' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                              {light.status}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="flex items-center">
+                              <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                              <span className="text-sm">{light.greenTime}s</span>
+                            </div>
+                            <div className="flex items-center">
+                              <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+                              <span className="text-sm">{light.redTime}s</span>
                             </div>
                           </div>
-                          
-                          <div className="grid grid-cols-2 gap-4 mt-2">
-                            <div className="flex flex-col items-center justify-center p-3 rounded-md bg-green-100">
-                              <span className="text-xs text-green-800">Luz Verde</span>
-                              <span className="text-2xl font-bold text-green-600">{light.greenTime}s</span>
+                          <div className="mt-2">
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                              <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${Math.random() * 100}%` }}></div>
                             </div>
-                            <div className="flex flex-col items-center justify-center p-3 rounded-md bg-red-100">
-                              <span className="text-xs text-red-800">Luz Roja</span>
-                              <span className="text-2xl font-bold text-red-600">{light.redTime}s</span>
-                            </div>
-                          </div>
-                          
-                          <div className="text-xs text-muted-foreground mt-2">
-                            Actualizando en tiempo real...
+                            <div className="text-xs text-right mt-1">Ciclo actual</div>
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                ) : (
-                  <p className="text-muted-foreground">No hay semáforos detectados en esta área</p>
                 )}
               </CardContent>
             </Card>

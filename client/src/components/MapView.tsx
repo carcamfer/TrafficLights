@@ -89,33 +89,69 @@ const MapView: React.FC = () => {
       try {
         // Capturar la imagen del mapa
         const mapElement = mapContainerRef.current;
-        if (!mapElement) return;
+        if (!mapElement) {
+          toast({
+            title: "Error",
+            description: "No se pudo encontrar el elemento del mapa para capturar",
+            variant: "destructive"
+          });
+          return;
+        }
         
-        const canvas = await html2canvas(mapElement);
-        const mapImageUrl = canvas.toDataURL('image/png');
-        
-        // Encontrar semáforos cercanos a la vista actual
-        const nearbyTrafficLights = TRAFFIC_LIGHTS.filter(light => {
-          const distance = mapRef.current?.distance(
-            [currentView.center.lat, currentView.center.lng],
-            [light.lat, light.lng]
-          );
-          return distance && distance < 2000; // Dentro de 2km
+        toast({
+          title: "Procesando",
+          description: "Capturando mapa, por favor espere...",
         });
         
-        // Aquí guardaríamos la vista en algún almacenamiento (localStorage por ahora)
-        const savedViews = JSON.parse(localStorage.getItem('savedMapViews') || '[]');
-        const newView = {
-          id: Date.now(),
-          name: `Intersección ${savedViews.length + 1}`,
-          lat: currentView.center.lat,
-          lng: currentView.center.lng,
-          zoom: currentView.zoom,
-          mapImage: mapImageUrl,
-          trafficLights: nearbyTrafficLights
-        };
+        // Asegurarse de que todos los tiles se hayan cargado antes de capturar
+        setTimeout(async () => {
+          try {
+            const canvas = await html2canvas(mapElement, {
+              useCORS: true,
+              allowTaint: true,
+              logging: true,
+              scale: window.devicePixelRatio
+            });
+            
+            const mapImageUrl = canvas.toDataURL('image/png');
+            
+            // Encontrar semáforos cercanos a la vista actual
+            const nearbyTrafficLights = TRAFFIC_LIGHTS.filter(light => {
+              const distance = mapRef.current?.distance(
+                [currentView.center.lat, currentView.center.lng],
+                [light.lat, light.lng]
+              );
+              return distance && distance < 2000; // Dentro de 2km
+            });
+            
+            // Aquí guardaríamos la vista en algún almacenamiento (localStorage por ahora)
+            const savedViews = JSON.parse(localStorage.getItem('savedMapViews') || '[]');
+            const newView = {
+              id: Date.now(),
+              name: `Intersección ${savedViews.length + 1}`,
+              lat: currentView.center.lat,
+              lng: currentView.center.lng,
+              zoom: currentView.zoom,
+              mapImage: mapImageUrl,
+              trafficLights: nearbyTrafficLights
+            };
 
-        localStorage.setItem('savedMapViews', JSON.stringify([...savedViews, newView]));
+            // Este código ha sido reemplazado en el fragmento anteriorView]));
+            
+            toast({
+              title: "Éxito",
+              description: "Vista guardada correctamente en el Dashboard",
+            });
+          } catch (error) {
+            console.error("Error al capturar la imagen:", error);
+            toast({
+              title: "Error",
+              description: "No se pudo capturar la imagen del mapa",
+              variant: "destructive"
+            });
+          }
+        }, 1000); // Esperar 1 segundo para asegurar que todos los tiles se carguen
+      } catch (error) {View]));
 
         toast({
           title: "Vista guardada",
