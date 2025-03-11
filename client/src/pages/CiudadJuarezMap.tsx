@@ -35,6 +35,12 @@ const CiudadJuarezMap: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-2">
+            <small className="flex items-center text-sm text-muted-foreground">
+              <img src="/attached_assets/semaforo.PNG" alt="Semáforo" className="w-4 h-4 mr-1" />
+              Ícono de semáforo en el mapa
+            </small>
+          </div>
           <MapView
             center={center}
             zoom={zoom}
