@@ -7,9 +7,9 @@ interface TrafficLightData {
   position: [number, number];
   state: 'red' | 'yellow' | 'green';
   iotStatus: 'connected' | 'disconnected' | 'error';
-  inputGreen: boolean;
+  inputGreen: number;
   feedbackGreen: number;
-  inputRed: boolean;
+  inputRed: number;
   feedbackRed: number;
 }
 
@@ -20,34 +20,34 @@ function App() {
       position: [31.6904, -106.4245],
       state: 'red',
       iotStatus: 'connected',
-      inputGreen: false,
-      feedbackGreen: 30,
-      inputRed: true,
-      feedbackRed: 45
+      inputGreen: 30,
+      feedbackGreen: 28,
+      inputRed: 45,
+      feedbackRed: 43
     },
     {
       id: 2,
       position: [31.6914, -106.4235],
       state: 'green',
       iotStatus: 'connected',
-      inputGreen: true,
-      feedbackGreen: 35,
-      inputRed: false,
-      feedbackRed: 50
+      inputGreen: 35,
+      feedbackGreen: 33,
+      inputRed: 50,
+      feedbackRed: 48
     },
     {
       id: 3,
       position: [31.6894, -106.4255],
       state: 'yellow',
       iotStatus: 'error',
-      inputGreen: false,
-      feedbackGreen: 25,
-      inputRed: false,
-      feedbackRed: 40
+      inputGreen: 25,
+      feedbackGreen: 0,
+      inputRed: 40,
+      feedbackRed: 0
     }
   ]);
 
-  const handleTimeChange = (id: number, type: 'feedbackGreen' | 'feedbackRed', value: number) => {
+  const handleTimeChange = (id: number, type: 'inputGreen' | 'inputRed', value: number) => {
     setTrafficLights(prev =>
       prev.map(light =>
         light.id === id ? { ...light, [type]: value } : light

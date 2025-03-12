@@ -7,9 +7,9 @@ interface TrafficLight {
   state: 'red' | 'yellow' | 'green';
   id: number;
   iotStatus: 'connected' | 'disconnected' | 'error';
-  inputGreen: boolean;
+  inputGreen: number;
   feedbackGreen: number;
-  inputRed: boolean;
+  inputRed: number;
   feedbackRed: number;
 }
 
@@ -94,9 +94,7 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Input Verde:</span>
-                      <span className={light.inputGreen ? 'text-green-600' : 'text-gray-600'}>
-                        {light.inputGreen ? 'Activo' : 'Inactivo'}
-                      </span>
+                      <span>{light.inputGreen}s</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Feedback Verde:</span>
@@ -104,9 +102,7 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Input Rojo:</span>
-                      <span className={light.inputRed ? 'text-red-600' : 'text-gray-600'}>
-                        {light.inputRed ? 'Activo' : 'Inactivo'}
-                      </span>
+                      <span>{light.inputRed}s</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Feedback Rojo:</span>
