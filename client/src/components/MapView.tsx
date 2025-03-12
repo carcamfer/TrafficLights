@@ -55,6 +55,14 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
           maxZoom={22}
           opacity={0.8}
           zIndex={10}
+          eventHandlers={{
+            tileerror: (error) => {
+              console.error('Error loading TomTom traffic tiles:', error);
+            },
+            tileload: () => {
+              console.log('TomTom traffic tile loaded successfully');
+            }
+          }}
         />
 
         {/* Grupo de marcadores de semáforos */}
