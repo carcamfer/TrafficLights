@@ -36,16 +36,22 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
         zoom={15} 
         style={{ height: '100%', width: '100%' }}
       >
-        {/* Capa base de TomTom con tráfico */}
+        {/* Capa base de TomTom */}
         <TileLayer
-          url={`https://{s}.api.tomtom.com/map/1/tile/basic/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256&layer=basic`}
+          url={`https://{s}.api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}`}
           attribution='© <a href="https://www.tomtom.com">TomTom</a>'
+          subdomains={['a', 'b', 'c', 'd']}
+          maxZoom={22}
         />
 
         {/* Capa de tráfico de TomTom */}
         <TileLayer
-          url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256`}
+          url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}`}
           attribution='Traffic Data © <a href="https://www.tomtom.com">TomTom</a>'
+          subdomains={['a', 'b', 'c', 'd']}
+          maxZoom={22}
+          opacity={0.8}
+          zIndex={10}
         />
 
         {/* Grupo de marcadores de semáforos */}
