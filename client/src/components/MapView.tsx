@@ -36,12 +36,10 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
         zoom={15} 
         style={{ height: '100%', width: '100%' }}
       >
-        {/* Capa base de TomTom */}
+        {/* Capa base de OpenStreetMap */}
         <TileLayer
-          url={`https://{s}.api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}`}
-          attribution='© <a href="https://www.tomtom.com">TomTom</a>'
-          subdomains={['a', 'b', 'c', 'd']}
-          maxZoom={22}
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
 
         {/* Capa de tráfico de TomTom */}
