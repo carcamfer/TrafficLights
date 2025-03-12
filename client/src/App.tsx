@@ -6,8 +6,11 @@ interface TrafficLightData {
   id: number;
   position: [number, number];
   state: 'red' | 'yellow' | 'green';
-  greenTime: number;
-  redTime: number;
+  iotStatus: 'connected' | 'disconnected' | 'error';
+  inputGreen: boolean;
+  feedbackGreen: number;
+  inputRed: boolean;
+  feedbackRed: number;
 }
 
 function App() {
@@ -16,26 +19,35 @@ function App() {
       id: 1,
       position: [31.6904, -106.4245],
       state: 'red',
-      greenTime: 30,
-      redTime: 45
+      iotStatus: 'connected',
+      inputGreen: false,
+      feedbackGreen: 30,
+      inputRed: true,
+      feedbackRed: 45
     },
     {
       id: 2,
       position: [31.6914, -106.4235],
       state: 'green',
-      greenTime: 35,
-      redTime: 50
+      iotStatus: 'connected',
+      inputGreen: true,
+      feedbackGreen: 35,
+      inputRed: false,
+      feedbackRed: 50
     },
     {
       id: 3,
       position: [31.6894, -106.4255],
       state: 'yellow',
-      greenTime: 25,
-      redTime: 40
+      iotStatus: 'error',
+      inputGreen: false,
+      feedbackGreen: 25,
+      inputRed: false,
+      feedbackRed: 40
     }
   ]);
 
-  const handleTimeChange = (id: number, type: 'greenTime' | 'redTime', value: number) => {
+  const handleTimeChange = (id: number, type: 'feedbackGreen' | 'feedbackRed', value: number) => {
     setTrafficLights(prev =>
       prev.map(light =>
         light.id === id ? { ...light, [type]: value } : light
@@ -74,8 +86,11 @@ function App() {
                   key={light.id}
                   id={light.id}
                   state={light.state}
-                  greenTime={light.greenTime}
-                  redTime={light.redTime}
+                  iotStatus={light.iotStatus}
+                  inputGreen={light.inputGreen}
+                  feedbackGreen={light.feedbackGreen}
+                  inputRed={light.inputRed}
+                  feedbackRed={light.feedbackRed}
                   onTimeChange={handleTimeChange}
                 />
               ))}

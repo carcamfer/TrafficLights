@@ -6,8 +6,11 @@ interface TrafficLight {
   position: [number, number];
   state: 'red' | 'yellow' | 'green';
   id: number;
-  greenTime: number;
-  redTime: number;
+  iotStatus: 'connected' | 'disconnected' | 'error';
+  inputGreen: boolean;
+  feedbackGreen: number;
+  inputRed: boolean;
+  feedbackRed: number;
 }
 
 interface MapViewProps {
@@ -79,16 +82,50 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
               <Popup>
                 <div className="p-2">
                   <h3 className="font-bold">Semáforo #{light.id}</h3>
-                  <div className="mt-2">
-                    <div 
-                      className="w-4 h-4 rounded-full mb-2" 
-                      style={{ backgroundColor: stateColors[light.state] }}
-                    />
-                    <p>Estado actual: {light.state}</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Puedes arrastrar este marcador para mover el semáforo
-                    </p>
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span>Estado IoT:</span>
+                      <span className={`capitalize px-2 py-0.5 rounded text-xs ${
+                        light.iotStatus === 'connected' ? 'bg-green-100 text-green-800' :
+                        light.iotStatus === 'disconnected' ? 'bg-gray-100 text-gray-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {light.iotStatus}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Input Verde:</span>
+                      <span className={light.inputGreen ? 'text-green-600' : 'text-gray-600'}>
+                        {light.inputGreen ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Feedback Verde:</span>
+                      <span>{light.feedbackGreen}s</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Input Rojo:</span>
+                      <span className={light.inputRed ? 'text-red-600' : 'text-gray-600'}>
+                        {light.inputRed ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Feedback Rojo:</span>
+                      <span>{light.feedbackRed}s</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Estado actual:</span>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: stateColors[light.state] }}
+                        />
+                        <span className="capitalize">{light.state}</span>
+                      </div>
+                    </div>
                   </div>
+                  <p className="text-xs text-gray-600 mt-2">
+                    Puedes arrastrar este marcador para mover el semáforo
+                  </p>
                 </div>
               </Popup>
             </Marker>
