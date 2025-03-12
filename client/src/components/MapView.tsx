@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, LayerGroup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -16,6 +16,11 @@ interface MapViewProps {
 }
 
 const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) => {
+  // Verificar que la API key está disponible
+  useEffect(() => {
+    console.log('TomTom API Key:', import.meta.env.VITE_TOMTOM_API_KEY);
+  }, []);
+
   // Colores fijos para los estados de los semáforos
   const stateColors = {
     red: '#ff0000',
