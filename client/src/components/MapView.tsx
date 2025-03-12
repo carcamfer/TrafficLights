@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup, LayerGroup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, LayerGroup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 interface TrafficLight {
@@ -14,27 +14,6 @@ interface MapViewProps {
   trafficLights: TrafficLight[];
   onPositionChange?: (id: number, newPosition: [number, number]) => void;
 }
-
-// Componente para la capa de tráfico
-const TrafficLayer: React.FC = () => {
-  const map = useMap();
-
-  React.useEffect(() => {
-    // Añadir capa de tráfico
-    const trafficLayer = L.tileLayer('https://mt0.google.com/vt/lyrs=traffic|style=15&x={x}&y={y}&z={z}', {
-      maxZoom: 20,
-      subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
-    });
-
-    trafficLayer.addTo(map);
-
-    return () => {
-      map.removeLayer(trafficLayer);
-    };
-  }, [map]);
-
-  return null;
-};
 
 const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) => {
   // Colores fijos para los estados de los semáforos
@@ -57,14 +36,17 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
         zoom={15} 
         style={{ height: '100%', width: '100%' }}
       >
-        {/* Capa base de OpenStreetMap */}
+        {/* Capa base de TomTom con tráfico */}
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url={`https://{s}.api.tomtom.com/map/1/tile/basic/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256&layer=basic`}
+          attribution='© <a href="https://www.tomtom.com">TomTom</a>'
         />
 
-        {/* Capa de tráfico */}
-        <TrafficLayer />
+        {/* Capa de tráfico de TomTom */}
+        <TileLayer
+          url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256`}
+          attribution='Traffic Data © <a href="https://www.tomtom.com">TomTom</a>'
+        />
 
         {/* Grupo de marcadores de semáforos */}
         <LayerGroup>
