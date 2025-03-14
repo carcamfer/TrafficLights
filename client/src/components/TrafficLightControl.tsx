@@ -23,7 +23,9 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
 }) => {
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
-      <h3 className="font-semibold mb-3">Semáforo #{id}</h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold">Semáforo #{id}</h3>
+      </div>
       <div className="space-y-3">
         {/* Estado IoT */}
         <div className="flex items-center justify-between">
