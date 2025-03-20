@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import MapView from './components/MapView';
 import TrafficLightControl from './components/TrafficLightControl';
+import { useMQTT } from './hooks/use-mqtt';
+import ErrorBoundary from './components/ErrorBoundary';
 
 interface TrafficLightData {
   id: number;
@@ -11,6 +13,51 @@ interface TrafficLightData {
   feedbackGreen: number;
   inputRed: number;
   feedbackRed: number;
+}
+
+function MQTTPanel() {
+  const { isConnected, lastMessage, error } = useMQTT();
+
+  if (error) {
+    return (
+      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+        <p className="text-sm text-red-600">{error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white p-4 rounded-lg shadow">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold">Datos del Simulador</h2>
+        <span className={`px-2 py-1 rounded text-sm ${
+          isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+        }`}>
+          MQTT: {isConnected ? 'Conectado' : 'Desconectado'}
+        </span>
+      </div>
+      {lastMessage ? (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Tópico:</span>
+            <span className="text-sm font-mono bg-gray-50 px-2 py-1 rounded">
+              {lastMessage.topic}
+            </span>
+          </div>
+          <div>
+            <span className="text-sm font-medium">Mensaje:</span>
+            <pre className="mt-1 text-xs bg-gray-50 p-2 rounded overflow-x-auto">
+              {JSON.stringify(lastMessage.message, null, 2)}
+            </pre>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-gray-500">
+          {isConnected ? 'Esperando datos del simulador...' : 'Conectando al servidor MQTT...'}
+        </p>
+      )}
+    </div>
+  );
 }
 
 function App() {
@@ -47,6 +94,8 @@ function App() {
     }
   ]);
 
+  const { isConnected, lastMessage } = useMQTT();
+
   const handleTimeChange = (id: number, type: 'inputGreen' | 'inputRed', value: number) => {
     setTrafficLights(prev =>
       prev.map(light =>
@@ -73,28 +122,43 @@ function App() {
       <main className="max-w-7xl mx-auto py-6 px-4">
         <div className="flex gap-6">
           <div className="flex-1">
-            <MapView 
-              trafficLights={trafficLights} 
-              onPositionChange={handlePositionChange}
-            />
+            <ErrorBoundary>
+              <MapView 
+                trafficLights={trafficLights} 
+                onPositionChange={handlePositionChange}
+              />
+            </ErrorBoundary>
           </div>
-          <div className="w-80">
-            <div className="bg-white p-4 rounded-lg shadow">
-              <h2 className="text-lg font-semibold mb-4">Control de Tiempos</h2>
-              {trafficLights.map(light => (
-                <TrafficLightControl
-                  key={light.id}
-                  id={light.id}
-                  state={light.state}
-                  iotStatus={light.iotStatus}
-                  inputGreen={light.inputGreen}
-                  feedbackGreen={light.feedbackGreen}
-                  inputRed={light.inputRed}
-                  feedbackRed={light.feedbackRed}
-                  onTimeChange={handleTimeChange}
-                />
-              ))}
-            </div>
+          <div className="w-96">
+            <ErrorBoundary>
+              <div className="bg-white p-4 rounded-lg shadow mb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold">Control de Tiempos</h2>
+                  <span className={`px-2 py-1 rounded text-sm ${
+                    isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    MQTT: {isConnected ? 'Conectado' : 'Desconectado'}
+                  </span>
+                </div>
+                {trafficLights.map(light => (
+                  <TrafficLightControl
+                    key={light.id}
+                    id={light.id}
+                    state={light.state}
+                    iotStatus={light.iotStatus}
+                    inputGreen={light.inputGreen}
+                    feedbackGreen={light.feedbackGreen}
+                    inputRed={light.inputRed}
+                    feedbackRed={light.feedbackRed}
+                    onTimeChange={handleTimeChange}
+                  />
+                ))}
+              </div>
+            </ErrorBoundary>
+
+            <ErrorBoundary>
+              <MQTTPanel />
+            </ErrorBoundary>
           </div>
         </div>
       </main>
