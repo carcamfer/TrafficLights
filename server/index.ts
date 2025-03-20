@@ -15,6 +15,7 @@ const wss = new WebSocketServer({ noServer: true });
 
 // Estado de los dispositivos
 let deviceStates = new Map();
+let lastMQTTMessage = null;
 
 // Basic API endpoint for testing
 app.get("/api/status", (_req, res) => {
@@ -24,6 +25,16 @@ app.get("/api/status", (_req, res) => {
 // Endpoint para obtener el estado actual de los dispositivos
 app.get("/api/devices", (_req, res) => {
   res.json(Array.from(deviceStates.values()));
+});
+
+// Endpoint para debugging de mensajes MQTT
+app.get("/api/iot/debug", (_req, res) => {
+  res.json({
+    devices: Array.from(deviceStates.values()),
+    lastMessage: lastMQTTMessage,
+    connectedClients: wss.clients.size,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Middleware for logging API requests
@@ -74,17 +85,27 @@ wss.on('connection', (ws) => {
 
     mqttClient.on('message', (topic, message) => {
       try {
+        console.log('\n=== Nuevo Mensaje MQTT ===');
+        console.log('Tópico:', topic);
+        console.log('Mensaje raw:', message.toString());
+
         const data = JSON.parse(message.toString());
         const deviceId = topic.split('/')[1]; // Asumiendo tópicos como 'iot/device1'
 
         log(`Mensaje MQTT recibido en tópico ${topic}:`);
-        log(JSON.stringify(data, null, 2));
+        console.log(JSON.stringify(data, null, 2));
 
         const deviceData = {
           deviceId,
           timestamp: new Date().toISOString(),
           data,
           status: 'active'
+        };
+
+        lastMQTTMessage = {
+          topic,
+          message: data,
+          receivedAt: new Date().toISOString()
         };
 
         deviceStates.set(deviceId, deviceData);
