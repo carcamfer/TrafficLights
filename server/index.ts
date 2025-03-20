@@ -9,7 +9,6 @@ const app = express();
 
 // Estado de los dispositivos
 let deviceStates = new Map();
-let lastMQTTMessage = null;
 
 // Configuración básica del servidor
 app.use(express.json());
@@ -43,20 +42,9 @@ app.get("/api/devices", (_req, res) => {
 app.get("/api/iot/debug", (_req, res) => {
   res.json({
     devices: Array.from(deviceStates.values()),
-    lastMessage: lastMQTTMessage,
     connectedClients: wss.clients.size,
     timestamp: new Date().toISOString()
   });
-});
-
-// Endpoint específico para datos de semáforos
-app.get("/api/traffic/:deviceId", (req, res) => {
-  const deviceId = req.params.deviceId;
-  const device = deviceStates.get(deviceId);
-  if (!device) {
-    return res.status(404).json({ error: "Dispositivo no encontrado" });
-  }
-  res.json(device);
 });
 
 // Manejo de conexiones WebSocket
@@ -77,26 +65,26 @@ wss.on('connection', (ws) => {
 
   try {
     // Conectar al broker MQTT
-    log('Intentando conectar al broker MQTT...');
+    log('===== Iniciando conexión MQTT =====');
     const mqttClient = mqtt.connect('mqtt://0.0.0.0:1883', {
       reconnectPeriod: 1000,
-      connectTimeout: 30000,
+      connectTimeout: 5000,
       keepalive: 60,
       clean: true,
-      clientId: 'traffic_server_' + Math.random().toString(16).substr(2, 8)
+      clientId: 'traffic_server_' + Math.random().toString(16).substr(2, 8),
+      rejectUnauthorized: false
     });
 
     mqttClient.on('connect', () => {
       log('===== Conexión MQTT establecida =====');
-      console.log('Broker conectado en:', 'mqtt://0.0.0.0:1883');
 
-      // Suscribirse a todos los tópicos de smartSemaphore
+      // Suscribirse al tópico base
       const topic = 'smartSemaphore/#';
       mqttClient.subscribe(topic, (err) => {
         if (err) {
           console.error(`Error al suscribirse al tópico ${topic}:`, err);
         } else {
-          log(`Suscrito al tópico: ${topic}`);
+          log(`Suscrito exitosamente al tópico: ${topic}`);
         }
       });
     });
@@ -107,7 +95,7 @@ wss.on('connection', (ws) => {
         log('Tópico:', topic);
         log('Mensaje:', message.toString());
 
-        // Extraer deviceId del tópico
+        // Extraer deviceId y tipo de mensaje del tópico
         const parts = topic.split('/');
         const deviceId = parts[2] || 'unknown';
         const messageType = parts[parts.length - 1];
