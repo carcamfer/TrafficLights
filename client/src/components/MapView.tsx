@@ -40,45 +40,65 @@ const createTrafficLightIcon = (state: 'red' | 'yellow' | 'green') => {
 };
 
 // Componente para actualizar la capa de tráfico
-const TrafficLayer = ({ opacity }: { opacity: number }) => {
+const TrafficLayer = () => {
   const map = useMap();
+  const [opacity, setOpacity] = useState(0.8);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const updateTrafficLayer = () => {
+    setIsUpdating(true);
+    // Forzar actualización de todas las capas de tráfico
+    map.eachLayer((layer: any) => {
+      if (layer._url?.includes('tomtom')) {
+        layer.redraw();
+      }
+    });
+    setLastUpdate(new Date());
+    setIsUpdating(false);
+  };
 
   useEffect(() => {
-    const updateTraffic = () => {
-      // Invalidate size to trigger a redraw
-      map.invalidateSize();
-    };
-
-    const interval = setInterval(updateTraffic, 30000);
+    const interval = setInterval(updateTrafficLayer, 30000); // Update every 30 seconds
     return () => clearInterval(interval);
   }, [map]);
 
   return (
-    <TileLayer
-      url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256&style=relative&liveTraffic=true&refresh=30`}
-      attribution='Traffic Data © <a href="https://www.tomtom.com">TomTom</a>'
-      subdomains={['a', 'b', 'c', 'd']}
-      maxZoom={22}
-      opacity={opacity}
-      zIndex={10}
-      updateWhenZooming={false}
-      updateWhenIdle={true}
-    />
+    <>
+      <TileLayer
+        url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256&style=relative&liveTraffic=true&timeValidityMinutes=2`}
+        attribution='Traffic Data © <a href="https://www.tomtom.com">TomTom</a>'
+        subdomains={['a', 'b', 'c', 'd']}
+        maxZoom={22}
+        opacity={opacity}
+        zIndex={10}
+      />
+      <div className="absolute bottom-4 right-4 bg-white p-2 rounded shadow z-[1000] text-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <label className="flex items-center gap-2">
+            Opacidad:
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={opacity}
+              onChange={(e) => setOpacity(parseFloat(e.target.value))}
+              className="w-24"
+            />
+            {Math.round(opacity * 100)}%
+          </label>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-gray-600">
+          <div className={`w-2 h-2 rounded-full ${isUpdating ? 'bg-green-500' : 'bg-gray-400'}`} />
+          Última actualización: {lastUpdate.toLocaleTimeString()}
+        </div>
+      </div>
+    </>
   );
 };
 
 const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) => {
-  const [trafficOpacity, setTrafficOpacity] = useState(0.8);
-  const [timestamp, setTimestamp] = useState(Date.now());
-
-  // Actualizar timestamp cada 30 segundos para forzar actualización de la capa
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTimestamp(Date.now());
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
   // Función para manejar el arrastre de marcadores
   const handleMarkerDragEnd = (id: number, event: any) => {
     const marker = event.target;
@@ -88,21 +108,6 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
 
   return (
     <div className="h-[600px] w-full rounded-lg overflow-hidden shadow-lg relative">
-      <div className="absolute top-2 right-2 z-[1000] bg-white p-2 rounded shadow">
-        <label className="block text-sm font-medium text-gray-700">
-          Opacidad del Tráfico
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={trafficOpacity}
-            onChange={(e) => setTrafficOpacity(parseFloat(e.target.value))}
-            className="w-full"
-          />
-        </label>
-      </div>
-
       <MapContainer 
         center={trafficLights[0]?.position || [31.6904, -106.4245]} 
         zoom={15} 
@@ -115,7 +120,7 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
         />
 
         {/* Capa de tráfico de TomTom con actualización automática */}
-        <TrafficLayer opacity={trafficOpacity} key={timestamp} />
+        <TrafficLayer />
 
         {/* Grupo de marcadores de semáforos */}
         <LayerGroup>
