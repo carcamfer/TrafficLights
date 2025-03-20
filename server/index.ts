@@ -78,6 +78,8 @@ wss.on('connection', (ws) => {
   try {
     // Conectar al broker MQTT local
     log('Intentando conectar al broker MQTT...');
+    log('MQTT URL:', process.env.MQTT_BROKER_URL);
+
     const mqttClient = mqtt.connect(process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883', {
       reconnectPeriod: 5000,
       connectTimeout: 30000,
@@ -108,7 +110,12 @@ wss.on('connection', (ws) => {
         try {
           data = JSON.parse(message.toString());
         } catch {
-          data = { value: message.toString() };
+          // Si no es JSON, asumimos que es un valor numérico o string
+          const value = message.toString();
+          // Extraemos el tipo de dato del tópico (red, yellow, green, cars)
+          const topicParts = topic.split('/');
+          const dataType = topicParts[topicParts.length - 1];
+          data = { [dataType]: value };
         }
 
         const deviceId = topic.split('/')[2]; // Obtener el ID del dispositivo del tópico
@@ -116,12 +123,18 @@ wss.on('connection', (ws) => {
         log(`Mensaje MQTT recibido en tópico ${topic}:`);
         console.log(JSON.stringify(data, null, 2));
 
-        const deviceData = {
+        // Actualizar o crear el estado del dispositivo
+        const existingDevice = deviceStates.get(deviceId) || {
           deviceId,
           timestamp: new Date().toISOString(),
-          data,
+          data: {},
           status: 'active'
         };
+
+        // Actualizar los datos del dispositivo
+        existingDevice.data = { ...existingDevice.data, ...data };
+        existingDevice.timestamp = new Date().toISOString();
+        deviceStates.set(deviceId, existingDevice);
 
         lastMQTTMessage = {
           topic,
@@ -129,14 +142,12 @@ wss.on('connection', (ws) => {
           receivedAt: new Date().toISOString()
         };
 
-        deviceStates.set(deviceId, deviceData);
-
         // Notificar a todos los clientes WebSocket
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({
               type: 'deviceUpdate',
-              data: deviceData
+              data: existingDevice
             }));
           }
         });
