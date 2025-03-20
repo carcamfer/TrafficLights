@@ -89,13 +89,20 @@ wss.on('connection', (ws) => {
     mqttClient.on('connect', () => {
       log('Conexión MQTT establecida');
 
-      // Suscribirse a todos los tópicos de dispositivos IoT
-      mqttClient.subscribe('smartSemaphore/lora_Device/#', (err) => {
-        if (err) {
-          console.error('Error al suscribirse a tópicos MQTT:', err);
-        } else {
-          log('Suscrito a tópicos IoT');
-        }
+      // Suscribirse a los tópicos específicos de los semáforos
+      const topics = [
+        'smartSemaphore/lora_Device/+/info/time/light/#',
+        'smartSemaphore/lora_Device/+/info/cars/#'
+      ];
+
+      topics.forEach(topic => {
+        mqttClient.subscribe(topic, (err) => {
+          if (err) {
+            console.error(`Error al suscribirse al tópico ${topic}:`, err);
+          } else {
+            log(`Suscrito al tópico: ${topic}`);
+          }
+        });
       });
     });
 
