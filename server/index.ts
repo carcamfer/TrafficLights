@@ -88,6 +88,7 @@ wss.on('connection', (ws) => {
 
     mqttClient.on('connect', () => {
       log('Conexión MQTT establecida');
+      log('Intentando suscribirse a los tópicos...');
 
       // Suscribirse a los tópicos específicos de los semáforos
       const topics = [
@@ -108,9 +109,9 @@ wss.on('connection', (ws) => {
 
     mqttClient.on('message', (topic, message) => {
       try {
-        console.log('\n=== Nuevo Mensaje MQTT ===');
-        console.log('Tópico:', topic);
-        console.log('Mensaje raw:', message.toString());
+        log('\n=== Nuevo Mensaje MQTT ===');
+        log('Tópico:', topic);
+        log('Mensaje raw:', message.toString());
 
         // Para mensajes que no son JSON, intentamos convertirlos
         let data;
