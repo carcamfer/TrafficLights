@@ -2,7 +2,8 @@ import { useEffect, useCallback, useState } from 'react';
 
 type MQTTMessage = {
   topic: string;
-  message: string;
+  message: any;
+  timestamp?: string;
 };
 
 export function useMQTT() {
@@ -35,8 +36,15 @@ export function useMQTT() {
 
     wsClient.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data) as MQTTMessage;
-        setLastMessage(data);
+        console.log('Mensaje WebSocket recibido:', event.data);
+        const data = JSON.parse(event.data);
+        if (data.type === 'deviceUpdate' || data.type === 'deviceStates') {
+          setLastMessage({
+            topic: data.data.deviceId ? `smartSemaphore/lora_Device/${data.data.deviceId}` : 'unknown',
+            message: data.data,
+            timestamp: new Date().toLocaleString()
+          });
+        }
         setError(null);
       } catch (error) {
         console.error('Error al procesar mensaje:', error);

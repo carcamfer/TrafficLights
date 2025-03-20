@@ -26,6 +26,13 @@ function MQTTPanel() {
     );
   }
 
+  const formatValue = (value: any) => {
+    if (typeof value === 'string' && !isNaN(Number(value))) {
+      return `${Number(value)} segundos`;
+    }
+    return value;
+  };
+
   return (
     <div className="bg-white p-4 rounded-lg shadow">
       <div className="flex items-center justify-between mb-4">
@@ -39,17 +46,29 @@ function MQTTPanel() {
       {lastMessage ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Tópico:</span>
+            <span className="text-sm font-medium">Dispositivo:</span>
             <span className="text-sm font-mono bg-gray-50 px-2 py-1 rounded">
-              {lastMessage.topic}
+              {lastMessage.topic.split('/')[2] || 'Desconocido'}
             </span>
           </div>
           <div>
-            <span className="text-sm font-medium">Mensaje:</span>
-            <pre className="mt-1 text-xs bg-gray-50 p-2 rounded overflow-x-auto">
-              {JSON.stringify(lastMessage.message, null, 2)}
-            </pre>
+            <span className="text-sm font-medium">Estado:</span>
+            <div className="mt-1 space-y-1">
+              {Object.entries(lastMessage.message).map(([key, value]) => (
+                <div key={key} className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{key}:</span>
+                  <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
+                    {formatValue(value)}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
+          {lastMessage.timestamp && (
+            <div className="text-xs text-gray-500 mt-2">
+              Última actualización: {lastMessage.timestamp}
+            </div>
+          )}
         </div>
       ) : (
         <p className="text-sm text-gray-500">
