@@ -88,6 +88,7 @@ wss.on('connection', (ws) => {
 
     mqttClient.on('connect', () => {
       log('Conexión MQTT establecida');
+      log('Broker URL:', process.env.MQTT_BROKER_URL);
       log('Intentando suscribirse a los tópicos...');
 
       // Suscribirse a los tópicos específicos de los semáforos
@@ -167,6 +168,7 @@ wss.on('connection', (ws) => {
 
     mqttClient.on('error', (error) => {
       console.error('Error en conexión MQTT:', error);
+      console.error('Intentando conectar a:', process.env.MQTT_BROKER_URL);
     });
 
     mqttClient.on('close', () => {
