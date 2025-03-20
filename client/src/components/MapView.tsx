@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, LayerGroup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useLoRaWAN } from '@/hooks/use-lorawan';
 
 interface TrafficLight {
   position: [number, number];
@@ -36,6 +37,27 @@ const createTrafficLightIcon = (state: 'red' | 'yellow' | 'green') => {
     html: svg,
     iconSize: [30, 30],
     iconAnchor: [15, 30],
+  });
+};
+
+// Crear icono para dispositivos LoRaWAN
+const createLoRaWANIcon = (status: 'active' | 'inactive' | 'error') => {
+  const color = status === 'active' ? '#22c55e' :
+                status === 'inactive' ? '#64748b' : '#ef4444';
+
+  const svg = `
+    <svg width="30" height="30" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="40" fill="${color}" />
+      <path d="M30 50 Q50 20 70 50 Q50 80 30 50" stroke="white" fill="none" stroke-width="8"/>
+      <circle cx="50" cy="50" r="8" fill="white"/>
+    </svg>
+  `;
+
+  return L.divIcon({
+    className: 'lorawan-device-icon',
+    html: svg,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
   });
 };
 
@@ -172,6 +194,7 @@ const TrafficLayer = () => {
 };
 
 const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) => {
+  const { devices, isConnected } = useLoRaWAN();
   // Función para manejar el arrastre de marcadores
   const handleMarkerDragEnd = (id: number, event: any) => {
     const marker = event.target;
@@ -181,6 +204,12 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
 
   return (
     <div className="h-[600px] w-full rounded-lg overflow-hidden shadow-lg relative">
+      {/* Status indicator for LoRaWAN connection */}
+      <div className="absolute top-2 left-2 z-[1000] bg-white px-3 py-1 rounded shadow text-sm flex items-center gap-2">
+        <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+        <span>LoRaWAN: {isConnected ? 'Conectado' : 'Desconectado'}</span>
+      </div>
+
       <MapContainer
         center={trafficLights[0]?.position || [31.6904, -106.4245]}
         zoom={15}
@@ -244,6 +273,43 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
                   <p className="text-xs text-gray-600 mt-2">
                     Puedes arrastrar este marcador para mover el semáforo
                   </p>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+        </LayerGroup>
+
+        {/* Capa de dispositivos LoRaWAN */}
+        <LayerGroup>
+          {devices.map((device) => (
+            <Marker
+              key={device.deviceId}
+              position={[
+                device.data?.latitude || 31.6904,
+                device.data?.longitude || -106.4245
+              ]}
+              icon={createLoRaWANIcon(device.status)}
+            >
+              <Popup>
+                <div className="p-2">
+                  <h3 className="font-bold mb-2">Dispositivo LoRaWAN</h3>
+                  <div className="space-y-1 text-sm">
+                    <p>ID: {device.deviceId}</p>
+                    <p>Estado: <span className={`px-2 py-0.5 rounded text-xs ${
+                      device.status === 'active' ? 'bg-green-100 text-green-800' :
+                        device.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                        'bg-red-100 text-red-800'
+                    }`}>{device.status}</span></p>
+                    <p>Última actualización: {new Date(device.timestamp).toLocaleString()}</p>
+                    {device.data && (
+                      <div className="mt-2">
+                        <p className="font-medium">Datos:</p>
+                        <pre className="text-xs bg-gray-50 p-2 rounded mt-1">
+                          {JSON.stringify(device.data, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </Popup>
             </Marker>
