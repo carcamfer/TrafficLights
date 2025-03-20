@@ -76,25 +76,23 @@ wss.on('connection', (ws) => {
   const server = app;
 
   try {
-    // Conectar al broker MQTT local
+    // Conectar al broker MQTT
     log('Intentando conectar al broker MQTT...');
-    log('MQTT URL:', process.env.MQTT_BROKER_URL);
-
-    const mqttClient = mqtt.connect(process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883', {
-      reconnectPeriod: 5000,
+    const mqttClient = mqtt.connect('mqtt://localhost:1883', {
+      reconnectPeriod: 1000,
       connectTimeout: 30000,
-      keepalive: 60
+      keepalive: 60,
+      clean: true,
+      clientId: 'traffic_server_' + Math.random().toString(16).substr(2, 8)
     });
 
     mqttClient.on('connect', () => {
       log('Conexión MQTT establecida');
-      log('Broker URL:', process.env.MQTT_BROKER_URL);
-      log('Intentando suscribirse a los tópicos...');
 
-      // Suscribirse a los tópicos específicos de los semáforos
+      // Suscribirse a los tópicos
       const topics = [
         'smartSemaphore/lora_Device/+/info/time/light/#',
-        'smartSemaphore/lora_Device/+/info/cars/#'
+        'smartSemaphore/lora_Device/+/info/cars/detect'
       ];
 
       topics.forEach(topic => {
@@ -110,65 +108,51 @@ wss.on('connection', (ws) => {
 
     mqttClient.on('message', (topic, message) => {
       try {
-        log('\n=== Nuevo Mensaje MQTT ===');
+        log('Mensaje MQTT recibido:');
         log('Tópico:', topic);
-        log('Mensaje raw:', message.toString());
+        log('Mensaje:', message.toString());
 
-        // Para mensajes que no son JSON, intentamos convertirlos
-        let data;
-        try {
-          data = JSON.parse(message.toString());
-        } catch {
-          // Si no es JSON, asumimos que es un valor numérico o string
-          const value = message.toString();
-          // Extraemos el tipo de dato del tópico (red, yellow, green, cars)
-          const topicParts = topic.split('/');
-          const dataType = topicParts[topicParts.length - 1];
-          data = { [dataType]: value };
-        }
-
-        const deviceId = topic.split('/')[2]; // Obtener el ID del dispositivo del tópico
-
-        log(`Mensaje MQTT recibido en tópico ${topic}:`);
-        console.log(JSON.stringify(data, null, 2));
+        const parts = topic.split('/');
+        const deviceId = parts[2];
+        const messageType = parts[parts.length - 1];
+        const value = parseInt(message.toString());
 
         // Actualizar o crear el estado del dispositivo
-        const existingDevice = deviceStates.get(deviceId) || {
+        const device = deviceStates.get(deviceId) || {
           deviceId,
           timestamp: new Date().toISOString(),
           data: {},
           status: 'active'
         };
 
-        // Actualizar los datos del dispositivo
-        existingDevice.data = { ...existingDevice.data, ...data };
-        existingDevice.timestamp = new Date().toISOString();
-        deviceStates.set(deviceId, existingDevice);
+        // Actualizar los datos según el tipo de mensaje
+        if (messageType === 'red' || messageType === 'yellow' || messageType === 'green') {
+          device.data[`time_${messageType}`] = value;
+        } else if (messageType === 'detect') {
+          device.data.cars_detected = value;
+        }
 
-        lastMQTTMessage = {
-          topic,
-          message: data,
-          receivedAt: new Date().toISOString()
-        };
+        device.timestamp = new Date().toISOString();
+        deviceStates.set(deviceId, device);
 
         // Notificar a todos los clientes WebSocket
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({
               type: 'deviceUpdate',
-              data: existingDevice
+              data: device
             }));
           }
         });
+
       } catch (error) {
         console.error('Error procesando mensaje MQTT:', error);
-        console.error('Mensaje recibido:', message.toString());
       }
     });
 
     mqttClient.on('error', (error) => {
       console.error('Error en conexión MQTT:', error);
-      console.error('Intentando conectar a:', process.env.MQTT_BROKER_URL);
+      log('Intentando reconectar en 1 segundo...');
     });
 
     mqttClient.on('close', () => {
@@ -181,7 +165,6 @@ wss.on('connection', (ws) => {
 
   } catch (error) {
     console.error('Error al configurar MQTT:', error);
-    log('Error en la integración MQTT, pero el servidor continuará funcionando');
   }
 
   // Error handling middleware
@@ -199,7 +182,6 @@ wss.on('connection', (ws) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve on port 5000
   const port = 5000;
   const serverInstance = server.listen({
     port,
@@ -208,7 +190,6 @@ wss.on('connection', (ws) => {
     log(`Servidor ejecutándose en el puerto ${port}`);
   });
 
-  // Configurar el servidor WebSocket
   serverInstance.on('upgrade', (request, socket, head) => {
     wss.handleUpgrade(request, socket, head, socket => {
       wss.emit('connection', socket, request);
