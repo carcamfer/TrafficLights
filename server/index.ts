@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import { WebSocketServer } from 'ws';
 import { setupVite, serveStatic, log } from "./vite";
-import { chirpstack } from '@chirpstack/chirpstack-api';
+import * as mqtt from 'mqtt';
 
 const app = express();
 app.use(express.json());
@@ -12,13 +12,6 @@ app.use(express.urlencoded({ extended: false }));
 
 // Configuración del servidor WebSocket
 const wss = new WebSocketServer({ noServer: true });
-
-// Configuración de ChirpStack
-const chirpstackConfig = {
-  host: process.env.LORA_SERVER_HOST,
-  port: parseInt(process.env.LORA_SERVER_PORT || '8080'),
-  apiKey: process.env.LORA_API_KEY,
-};
 
 // Estado de los dispositivos
 let deviceStates = new Map();
@@ -61,48 +54,59 @@ wss.on('connection', (ws) => {
 (async () => {
   const server = app;
 
-  if (process.env.ENABLE_LORAWAN === 'true') {
-    try {
-      log('Intentando conectar con ChirpStack...');
-      log(`Host: ${chirpstackConfig.host}`);
-      log(`Puerto: ${chirpstackConfig.port}`);
+  try {
+    // Conectar al broker MQTT local
+    log('Intentando conectar al broker MQTT...');
+    const mqttClient = mqtt.connect('mqtt://localhost:1883');
 
-      // Configurar el cliente de ChirpStack
-      const client = new chirpstack.ApplicationService(
-        `${chirpstackConfig.host}:${chirpstackConfig.port}`,
-        chirpstackConfig.apiKey
-      );
+    mqttClient.on('connect', () => {
+      log('Conexión MQTT establecida');
 
-      // Suscribirse a eventos de dispositivos
-      client.streamDeviceEvents({}, (event: any) => {
-        if (event.type === 'uplink') {
-          const deviceData = {
-            deviceId: event.deviceInfo.deviceId,
-            timestamp: new Date().toISOString(),
-            data: event.data,
-            status: 'active'
-          };
-
-          deviceStates.set(event.deviceInfo.deviceId, deviceData);
-
-          // Notificar a todos los clientes WebSocket
-          wss.clients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify({
-                type: 'deviceUpdate',
-                data: deviceData
-              }));
-            }
-          });
+      // Suscribirse a todos los tópicos de dispositivos IoT
+      mqttClient.subscribe('iot/#', (err) => {
+        if (err) {
+          console.error('Error al suscribirse a tópicos MQTT:', err);
+        } else {
+          log('Suscrito a tópicos IoT');
         }
       });
+    });
 
-      log('Conexión LoRaWAN establecida correctamente');
-    } catch (error) {
-      console.error('Error al configurar LoRaWAN:', error);
-    }
-  } else {
-    log('Integración LoRaWAN deshabilitada');
+    mqttClient.on('message', (topic, message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        const deviceId = topic.split('/')[1]; // Asumiendo tópicos como 'iot/device1'
+
+        const deviceData = {
+          deviceId,
+          timestamp: new Date().toISOString(),
+          data,
+          status: 'active'
+        };
+
+        deviceStates.set(deviceId, deviceData);
+
+        // Notificar a todos los clientes WebSocket
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: 'deviceUpdate',
+              data: deviceData
+            }));
+          }
+        });
+      } catch (error) {
+        console.error('Error procesando mensaje MQTT:', error);
+      }
+    });
+
+    mqttClient.on('error', (error) => {
+      console.error('Error en conexión MQTT:', error);
+    });
+
+  } catch (error) {
+    console.error('Error al configurar MQTT:', error);
+    log('Error en la integración MQTT, pero el servidor continuará funcionando');
   }
 
   // Error handling middleware
