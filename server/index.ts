@@ -78,7 +78,7 @@ wss.on('connection', (ws) => {
   try {
     // Conectar al broker MQTT
     log('Intentando conectar al broker MQTT...');
-    const mqttClient = mqtt.connect('mqtt://localhost:1883', {
+    const mqttClient = mqtt.connect('mqtt://0.0.0.0:1883', {
       reconnectPeriod: 1000,
       connectTimeout: 30000,
       keepalive: 60,
@@ -87,33 +87,29 @@ wss.on('connection', (ws) => {
     });
 
     mqttClient.on('connect', () => {
-      log('Conexión MQTT establecida');
+      log('===== Conexión MQTT establecida =====');
+      console.log('Broker conectado en:', 'mqtt://0.0.0.0:1883');
 
-      // Suscribirse a los tópicos
-      const topics = [
-        'smartSemaphore/lora_Device/+/info/time/light/#',
-        'smartSemaphore/lora_Device/+/info/cars/detect'
-      ];
-
-      topics.forEach(topic => {
-        mqttClient.subscribe(topic, (err) => {
-          if (err) {
-            console.error(`Error al suscribirse al tópico ${topic}:`, err);
-          } else {
-            log(`Suscrito al tópico: ${topic}`);
-          }
-        });
+      // Suscribirse a todos los tópicos de smartSemaphore
+      const topic = 'smartSemaphore/#';
+      mqttClient.subscribe(topic, (err) => {
+        if (err) {
+          console.error(`Error al suscribirse al tópico ${topic}:`, err);
+        } else {
+          log(`Suscrito al tópico: ${topic}`);
+        }
       });
     });
 
     mqttClient.on('message', (topic, message) => {
       try {
-        log('Mensaje MQTT recibido:');
+        log('\n===== Nuevo Mensaje MQTT =====');
         log('Tópico:', topic);
         log('Mensaje:', message.toString());
 
+        // Extraer deviceId del tópico
         const parts = topic.split('/');
-        const deviceId = parts[2];
+        const deviceId = parts[2] || 'unknown';
         const messageType = parts[parts.length - 1];
         const value = parseInt(message.toString());
 
@@ -128,20 +124,26 @@ wss.on('connection', (ws) => {
         // Actualizar los datos según el tipo de mensaje
         if (messageType === 'red' || messageType === 'yellow' || messageType === 'green') {
           device.data[`time_${messageType}`] = value;
+          log(`Actualizado tiempo ${messageType}: ${value}`);
         } else if (messageType === 'detect') {
           device.data.cars_detected = value;
+          log(`Actualizado cars_detected: ${value}`);
         }
 
         device.timestamp = new Date().toISOString();
         deviceStates.set(deviceId, device);
 
         // Notificar a todos los clientes WebSocket
+        const wsMessage = JSON.stringify({
+          type: 'deviceUpdate',
+          data: device
+        });
+
+        log('Enviando actualización a clientes WebSocket:', wsMessage);
+
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({
-              type: 'deviceUpdate',
-              data: device
-            }));
+            client.send(wsMessage);
           }
         });
 
