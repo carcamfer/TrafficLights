@@ -16,7 +16,7 @@ interface TrafficLightData {
 }
 
 function MQTTPanel() {
-  const { isConnected, lastMessage, error } = useMQTT();
+  const { isConnected, devices, error } = useMQTT();
 
   if (error) {
     return (
@@ -43,32 +43,32 @@ function MQTTPanel() {
           MQTT: {isConnected ? 'Conectado' : 'Desconectado'}
         </span>
       </div>
-      {lastMessage ? (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Dispositivo:</span>
-            <span className="text-sm font-mono bg-gray-50 px-2 py-1 rounded">
-              {lastMessage.topic.split('/')[2] || 'Desconocido'}
-            </span>
-          </div>
-          <div>
-            <span className="text-sm font-medium">Estado:</span>
-            <div className="mt-1 space-y-1">
-              {Object.entries(lastMessage.message).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{key}:</span>
-                  <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
-                    {formatValue(value)}
-                  </span>
-                </div>
-              ))}
+
+      {devices.size > 0 ? (
+        <div className="space-y-4">
+          {Array.from(devices.values()).map(device => (
+            <div key={device.deviceId} className="border rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Dispositivo:</span>
+                <span className="text-sm font-mono bg-gray-50 px-2 py-1 rounded">
+                  {device.deviceId}
+                </span>
+              </div>
+              <div className="space-y-1">
+                {Object.entries(device.data || {}).map(([key, value]) => (
+                  <div key={key} className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{key}:</span>
+                    <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
+                      {formatValue(value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                Última actualización: {new Date(device.timestamp).toLocaleString()}
+              </div>
             </div>
-          </div>
-          {lastMessage.timestamp && (
-            <div className="text-xs text-gray-500 mt-2">
-              Última actualización: {lastMessage.timestamp}
-            </div>
-          )}
+          ))}
         </div>
       ) : (
         <p className="text-sm text-gray-500">
