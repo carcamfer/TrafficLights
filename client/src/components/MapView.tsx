@@ -59,6 +59,16 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
 
+        {/* Capa de tráfico de TomTom */}
+        <TileLayer
+          url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}`}
+          attribution='Traffic Data © <a href="https://www.tomtom.com">TomTom</a>'
+          subdomains={['a', 'b', 'c', 'd']}
+          maxZoom={22}
+          opacity={0.8}
+          zIndex={10}
+        />
+
         {/* Grupo de marcadores de semáforos */}
         <LayerGroup>
           {trafficLights.map((light) => (
