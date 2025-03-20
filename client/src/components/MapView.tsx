@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup, LayerGroup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -19,11 +19,6 @@ interface MapViewProps {
 }
 
 const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) => {
-  // Verificar que la API key está disponible
-  useEffect(() => {
-    console.log('TomTom API Key:', import.meta.env.VITE_TOMTOM_API_KEY);
-  }, []);
-
   // Colores fijos para los estados de los semáforos
   const stateColors = {
     red: '#ff0000',
@@ -48,24 +43,6 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-
-        {/* Capa de tráfico de TomTom */}
-        <TileLayer
-          url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}`}
-          attribution='Traffic Data © <a href="https://www.tomtom.com">TomTom</a>'
-          subdomains={['a', 'b', 'c', 'd']}
-          maxZoom={22}
-          opacity={0.8}
-          zIndex={10}
-          eventHandlers={{
-            tileerror: (error) => {
-              console.error('Error loading TomTom traffic tiles:', error);
-            },
-            tileload: () => {
-              console.log('TomTom traffic tile loaded successfully');
-            }
-          }}
         />
 
         {/* Grupo de marcadores de semáforos */}
