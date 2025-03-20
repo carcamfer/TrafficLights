@@ -2,40 +2,22 @@ import 'dotenv/config';
 import express from "express";
 import cors from "cors";
 import { WebSocketServer } from 'ws';
-import { setupVite, serveStatic, log } from "./vite";
 import * as mqtt from 'mqtt';
+import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+// Estado de los dispositivos
+let deviceStates = new Map();
+let lastMQTTMessage = null;
+
+// Configuración básica del servidor
 app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
 // Configuración del servidor WebSocket
 const wss = new WebSocketServer({ noServer: true });
-
-// Estado de los dispositivos
-let deviceStates = new Map();
-let lastMQTTMessage = null;
-
-// Basic API endpoint for testing
-app.get("/api/status", (_req, res) => {
-  res.json({ status: "ok", message: "Servidor de semáforos funcionando" });
-});
-
-// Endpoint para obtener el estado actual de los dispositivos
-app.get("/api/devices", (_req, res) => {
-  res.json(Array.from(deviceStates.values()));
-});
-
-// Endpoint para debugging de mensajes MQTT
-app.get("/api/iot/debug", (_req, res) => {
-  res.json({
-    devices: Array.from(deviceStates.values()),
-    lastMessage: lastMQTTMessage,
-    connectedClients: wss.clients.size,
-    timestamp: new Date().toISOString()
-  });
-});
 
 // Middleware for logging API requests
 app.use((req, res, next) => {
@@ -47,6 +29,24 @@ app.use((req, res, next) => {
     }
   });
   next();
+});
+
+// API Endpoints
+app.get("/api/status", (_req, res) => {
+  res.json({ status: "ok", message: "Servidor de semáforos funcionando" });
+});
+
+app.get("/api/devices", (_req, res) => {
+  res.json(Array.from(deviceStates.values()));
+});
+
+app.get("/api/iot/debug", (_req, res) => {
+  res.json({
+    devices: Array.from(deviceStates.values()),
+    lastMessage: lastMQTTMessage,
+    connectedClients: wss.clients.size,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Manejo de conexiones WebSocket
