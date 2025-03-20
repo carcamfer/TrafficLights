@@ -45,10 +45,10 @@ const TrafficLayer = () => {
   const [opacity, setOpacity] = useState(0.8);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [isUpdating, setIsUpdating] = useState(false);
+  const [viewMode, setViewMode] = useState<'flow' | 'heatmap'>('flow');
 
   const updateTrafficLayer = () => {
     setIsUpdating(true);
-    // Forzar actualización de todas las capas de tráfico
     map.eachLayer((layer: any) => {
       if (layer._url?.includes('tomtom')) {
         layer.redraw();
@@ -59,22 +59,65 @@ const TrafficLayer = () => {
   };
 
   useEffect(() => {
-    const interval = setInterval(updateTrafficLayer, 30000); // Update every 30 seconds
+    const interval = setInterval(updateTrafficLayer, 30000);
     return () => clearInterval(interval);
   }, [map]);
 
   return (
     <>
-      <TileLayer
-        url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256&style=relative&liveTraffic=true&timeValidityMinutes=2`}
-        attribution='Traffic Data © <a href="https://www.tomtom.com">TomTom</a>'
-        subdomains={['a', 'b', 'c', 'd']}
-        maxZoom={22}
-        opacity={opacity}
-        zIndex={10}
-      />
-      <div className="absolute bottom-4 right-4 bg-white p-2 rounded shadow z-[1000] text-sm">
-        <div className="flex items-center gap-2 mb-2">
+      {/* Capa de flujo de tráfico */}
+      {viewMode === 'flow' && (
+        <TileLayer
+          url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256&style=relative&liveTraffic=true&timeValidityMinutes=2`}
+          attribution='Traffic Data © <a href="https://www.tomtom.com">TomTom</a>'
+          subdomains={['a', 'b', 'c', 'd']}
+          maxZoom={22}
+          opacity={opacity}
+          zIndex={10}
+        />
+      )}
+
+      {/* Capa de mapa de calor */}
+      {viewMode === 'heatmap' && (
+        <TileLayer
+          url={`https://{s}.api.tomtom.com/traffic/map/4/tile/heatmap/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256&style=absolute&liveTraffic=true&timeValidityMinutes=2`}
+          attribution='Traffic Data © <a href="https://www.tomtom.com">TomTom</a>'
+          subdomains={['a', 'b', 'c', 'd']}
+          maxZoom={22}
+          opacity={opacity}
+          zIndex={10}
+        />
+      )}
+
+      {/* Panel de control */}
+      <div className="absolute bottom-4 right-4 bg-white p-4 rounded shadow z-[1000] text-sm space-y-4">
+        <div className="space-y-2">
+          <h3 className="font-medium">Vista de Tráfico</h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewMode('flow')}
+              className={`px-3 py-1 rounded ${
+                viewMode === 'flow'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 hover:bg-gray-200'
+              }`}
+            >
+              Flujo
+            </button>
+            <button
+              onClick={() => setViewMode('heatmap')}
+              className={`px-3 py-1 rounded ${
+                viewMode === 'heatmap'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 hover:bg-gray-200'
+              }`}
+            >
+              Mapa de Calor
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
           <label className="flex items-center gap-2">
             Opacidad:
             <input
@@ -89,6 +132,32 @@ const TrafficLayer = () => {
             {Math.round(opacity * 100)}%
           </label>
         </div>
+
+        {/* Leyenda del mapa de calor */}
+        {viewMode === 'heatmap' && (
+          <div className="space-y-2">
+            <h3 className="font-medium">Niveles de Congestión</h3>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-600" />
+                <span>Congestión Severa</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-orange-500" />
+                <span>Congestión Alta</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-yellow-400" />
+                <span>Congestión Moderada</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-green-500" />
+                <span>Flujo Libre</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 text-xs text-gray-600">
           <div className={`w-2 h-2 rounded-full ${isUpdating ? 'bg-green-500' : 'bg-gray-400'}`} />
           Última actualización: {lastUpdate.toLocaleTimeString()}
