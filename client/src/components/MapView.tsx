@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup, LayerGroup } from 'react-leaflet';
+import React, { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, LayerGroup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -38,7 +38,31 @@ const createTrafficLightIcon = (state: 'red' | 'yellow' | 'green') => {
   });
 };
 
+// Componente para actualizar la capa de tráfico
+const TrafficLayerUpdater = ({ opacity }: { opacity: number }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    const updateTraffic = () => {
+      // Forzar actualización de las capas
+      map.eachLayer((layer) => {
+        if (layer instanceof L.TileLayer && layer.getUrl().includes('tomtom')) {
+          layer.redraw();
+        }
+      });
+    };
+
+    // Actualizar cada 30 segundos
+    const interval = setInterval(updateTraffic, 30000);
+    return () => clearInterval(interval);
+  }, [map]);
+
+  return null;
+};
+
 const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) => {
+  const [trafficOpacity, setTrafficOpacity] = useState(0.8);
+
   // Función para manejar el arrastre de marcadores
   const handleMarkerDragEnd = (id: number, event: any) => {
     const marker = event.target;
@@ -47,7 +71,22 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
   };
 
   return (
-    <div className="h-[600px] w-full rounded-lg overflow-hidden shadow-lg">
+    <div className="h-[600px] w-full rounded-lg overflow-hidden shadow-lg relative">
+      <div className="absolute top-2 right-2 z-[1000] bg-white p-2 rounded shadow">
+        <label className="block text-sm font-medium text-gray-700">
+          Opacidad del Tráfico
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            value={trafficOpacity}
+            onChange={(e) => setTrafficOpacity(parseFloat(e.target.value))}
+            className="w-full"
+          />
+        </label>
+      </div>
+
       <MapContainer 
         center={trafficLights[0]?.position || [31.6904, -106.4245]} 
         zoom={15} 
@@ -61,13 +100,15 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
 
         {/* Capa de tráfico de TomTom */}
         <TileLayer
-          url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}`}
+          url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256&style=relative&liveTraffic=true`}
           attribution='Traffic Data © <a href="https://www.tomtom.com">TomTom</a>'
           subdomains={['a', 'b', 'c', 'd']}
           maxZoom={22}
-          opacity={0.8}
+          opacity={trafficOpacity}
           zIndex={10}
         />
+
+        <TrafficLayerUpdater opacity={trafficOpacity} />
 
         {/* Grupo de marcadores de semáforos */}
         <LayerGroup>
