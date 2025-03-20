@@ -164,11 +164,12 @@ wss.on('connection', (ws) => {
   }
 
   // Error handling middleware
-  app.use((err: any, _req: express.Request, res: express.Response) => {
+  app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Error interno del servidor";
-    res.json({ message });
+    res.status(status).json({ message });
     console.error(err);
+    next(err);
   });
 
   if (app.get("env") === "development") {
