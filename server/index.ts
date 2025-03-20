@@ -18,18 +18,6 @@ app.use(express.urlencoded({ extended: false }));
 // Configuración del servidor WebSocket
 const wss = new WebSocketServer({ noServer: true });
 
-// Middleware for logging API requests
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (req.path.startsWith("/api")) {
-      log(`${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
-    }
-  });
-  next();
-});
-
 // API Endpoints
 app.get("/api/status", (_req, res) => {
   res.json({ status: "ok", message: "Servidor de semáforos funcionando" });
@@ -105,12 +93,18 @@ wss.on('connection', (ws) => {
         log('\n===== Nuevo Mensaje MQTT =====');
         log('Tópico:', topic);
         log('Mensaje:', message.toString());
+        log('Timestamp:', new Date().toISOString());
 
         // Extraer deviceId y tipo de mensaje del tópico
         const parts = topic.split('/');
         const deviceId = parts[2] || 'unknown';
         const messageType = parts[parts.length - 1];
         const value = parseInt(message.toString());
+
+        log('Detalles del mensaje:');
+        log('- Device ID:', deviceId);
+        log('- Tipo de mensaje:', messageType);
+        log('- Valor:', value);
 
         // Actualizar o crear el estado del dispositivo
         const device = deviceStates.get(deviceId) || {
