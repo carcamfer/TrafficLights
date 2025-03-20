@@ -77,6 +77,9 @@ wss.on('connection', (ws) => {
         const data = JSON.parse(message.toString());
         const deviceId = topic.split('/')[1]; // Asumiendo tópicos como 'iot/device1'
 
+        log(`Mensaje MQTT recibido en tópico ${topic}:`);
+        log(JSON.stringify(data, null, 2));
+
         const deviceData = {
           deviceId,
           timestamp: new Date().toISOString(),
@@ -97,6 +100,7 @@ wss.on('connection', (ws) => {
         });
       } catch (error) {
         console.error('Error procesando mensaje MQTT:', error);
+        console.error('Mensaje recibido:', message.toString());
       }
     });
 
