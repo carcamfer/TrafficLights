@@ -63,10 +63,20 @@ wss.on('connection', (ws) => {
 (async () => {
   const server = app;
 
-  try {
-    // Conectar al broker MQTT
-    log('===== Iniciando conexión MQTT =====');
-    const mqttClient = mqtt.connect('mqtt://0.0.0.0:1883', {
+  // Conectar al broker MQTT
+  log('===== Iniciando conexión MQTT =====');
+  const brokerUrls = [
+    'mqtt://localhost:1883',
+    'mqtt://127.0.0.1:1883',
+    'mqtt://0.0.0.0:1883'
+  ];
+  let currentBrokerIndex = 0;
+
+  const connectToBroker = () => {
+    const brokerUrl = brokerUrls[currentBrokerIndex];
+    log(`Intentando conectar a broker MQTT: ${brokerUrl}`);
+
+    const mqttClient = mqtt.connect(brokerUrl, {
       reconnectPeriod: 1000,
       connectTimeout: 5000,
       keepalive: 60,
@@ -77,6 +87,7 @@ wss.on('connection', (ws) => {
 
     mqttClient.on('connect', () => {
       log('===== Conexión MQTT establecida =====');
+      log(`Conectado exitosamente a: ${brokerUrl}`);
 
       // Suscribirse al tópico base
       const topic = 'smartSemaphore/#';
@@ -137,12 +148,20 @@ wss.on('connection', (ws) => {
 
       } catch (error) {
         console.error('Error procesando mensaje MQTT:', error);
+        log('Error al procesar mensaje:', error.message);
       }
     });
 
     mqttClient.on('error', (error) => {
       console.error('Error en conexión MQTT:', error);
+      log('Error MQTT:', error.message);
       log('Intentando reconectar en 1 segundo...');
+
+      // Intentar siguiente URL si hay error
+      currentBrokerIndex = (currentBrokerIndex + 1) % brokerUrls.length;
+      setTimeout(connectToBroker, 1000);
+
+      mqttClient.end();
     });
 
     mqttClient.on('close', () => {
@@ -153,6 +172,11 @@ wss.on('connection', (ws) => {
       log('Intentando reconexión MQTT...');
     });
 
+    return mqttClient;
+  };
+
+  try {
+    connectToBroker();
   } catch (error) {
     console.error('Error al configurar MQTT:', error);
   }
