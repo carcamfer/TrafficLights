@@ -17,6 +17,7 @@ interface TrafficLight {
 interface MapViewProps {
   trafficLights: TrafficLight[];
   onPositionChange?: (id: number, newPosition: [number, number]) => void;
+  onCapture?: (imageData: string) => void;
 }
 
 // Crear icono personalizado para los semáforos
@@ -39,29 +40,44 @@ const createTrafficLightIcon = (state: 'red' | 'yellow' | 'green') => {
 };
 
 // Componente para actualizar la capa de tráfico
-const TrafficLayerUpdater = ({ opacity }: { opacity: number }) => {
+const TrafficLayer = ({ opacity }: { opacity: number }) => {
   const map = useMap();
 
   useEffect(() => {
     const updateTraffic = () => {
-      // Forzar actualización de las capas
-      map.eachLayer((layer) => {
-        if (layer instanceof L.TileLayer && layer.getUrl().includes('tomtom')) {
-          layer.redraw();
-        }
-      });
+      // Invalidate size to trigger a redraw
+      map.invalidateSize();
     };
 
-    // Actualizar cada 30 segundos
     const interval = setInterval(updateTraffic, 30000);
     return () => clearInterval(interval);
   }, [map]);
 
-  return null;
+  return (
+    <TileLayer
+      url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256&style=relative&liveTraffic=true&refresh=30`}
+      attribution='Traffic Data © <a href="https://www.tomtom.com">TomTom</a>'
+      subdomains={['a', 'b', 'c', 'd']}
+      maxZoom={22}
+      opacity={opacity}
+      zIndex={10}
+      updateWhenZooming={false}
+      updateWhenIdle={true}
+    />
+  );
 };
 
 const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) => {
   const [trafficOpacity, setTrafficOpacity] = useState(0.8);
+  const [timestamp, setTimestamp] = useState(Date.now());
+
+  // Actualizar timestamp cada 30 segundos para forzar actualización de la capa
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimestamp(Date.now());
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Función para manejar el arrastre de marcadores
   const handleMarkerDragEnd = (id: number, event: any) => {
@@ -98,17 +114,8 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
 
-        {/* Capa de tráfico de TomTom */}
-        <TileLayer
-          url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256&style=relative&liveTraffic=true`}
-          attribution='Traffic Data © <a href="https://www.tomtom.com">TomTom</a>'
-          subdomains={['a', 'b', 'c', 'd']}
-          maxZoom={22}
-          opacity={trafficOpacity}
-          zIndex={10}
-        />
-
-        <TrafficLayerUpdater opacity={trafficOpacity} />
+        {/* Capa de tráfico de TomTom con actualización automática */}
+        <TrafficLayer opacity={trafficOpacity} key={timestamp} />
 
         {/* Grupo de marcadores de semáforos */}
         <LayerGroup>
