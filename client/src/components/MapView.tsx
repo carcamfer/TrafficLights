@@ -1,5 +1,6 @@
 import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup, LayerGroup } from 'react-leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 interface TrafficLight {
@@ -18,14 +19,27 @@ interface MapViewProps {
   onPositionChange?: (id: number, newPosition: [number, number]) => void;
 }
 
-const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) => {
-  // Colores fijos para los estados de los semáforos
-  const stateColors = {
-    red: '#ff0000',
-    yellow: '#ffff00',
-    green: '#00ff00'
-  };
+// Crear icono personalizado para los semáforos
+const createTrafficLightIcon = (state: 'red' | 'yellow' | 'green') => {
+  const svg = `
+    <svg width="30" height="30" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="30" y="10" width="40" height="80" rx="5" fill="#333" />
+      <circle cx="50" cy="30" r="12" fill="${state === 'red' ? '#ff4444' : '#441111'}" />
+      <circle cx="50" cy="50" r="12" fill="${state === 'yellow' ? '#ffff44' : '#444411'}" />
+      <circle cx="50" cy="70" r="12" fill="${state === 'green' ? '#44ff44' : '#114411'}" />
+    </svg>
+  `;
 
+  return L.divIcon({
+    className: 'traffic-light-icon',
+    html: svg,
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+  });
+};
+
+const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) => {
+  // Función para manejar el arrastre de marcadores
   const handleMarkerDragEnd = (id: number, event: any) => {
     const marker = event.target;
     const position = marker.getLatLng();
@@ -35,7 +49,7 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
   return (
     <div className="h-[600px] w-full rounded-lg overflow-hidden shadow-lg">
       <MapContainer 
-        center={trafficLights[0].position} 
+        center={trafficLights[0]?.position || [31.6904, -106.4245]} 
         zoom={15} 
         style={{ height: '100%', width: '100%' }}
       >
@@ -52,6 +66,7 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
               key={light.id}
               position={light.position}
               draggable={true}
+              icon={createTrafficLightIcon(light.state)}
               eventHandlers={{
                 dragend: (e) => handleMarkerDragEnd(light.id, e)
               }}
@@ -87,13 +102,7 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Estado actual:</span>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: stateColors[light.state] }}
-                        />
-                        <span className="capitalize">{light.state}</span>
-                      </div>
+                      <span className="capitalize">{light.state}</span>
                     </div>
                   </div>
                   <p className="text-xs text-gray-600 mt-2">
