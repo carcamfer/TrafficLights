@@ -49,6 +49,16 @@ app.get("/api/iot/debug", (_req, res) => {
   });
 });
 
+// Endpoint específico para datos de semáforos
+app.get("/api/traffic/:deviceId", (req, res) => {
+  const deviceId = req.params.deviceId;
+  const device = deviceStates.get(deviceId);
+  if (!device) {
+    return res.status(404).json({ error: "Dispositivo no encontrado" });
+  }
+  res.json(device);
+});
+
 // Manejo de conexiones WebSocket
 wss.on('connection', (ws) => {
   log('Nueva conexión WebSocket establecida');
@@ -68,13 +78,17 @@ wss.on('connection', (ws) => {
   try {
     // Conectar al broker MQTT local
     log('Intentando conectar al broker MQTT...');
-    const mqttClient = mqtt.connect('mqtt://localhost:1883');
+    const mqttClient = mqtt.connect(process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883', {
+      reconnectPeriod: 5000,
+      connectTimeout: 30000,
+      keepalive: 60
+    });
 
     mqttClient.on('connect', () => {
       log('Conexión MQTT establecida');
 
       // Suscribirse a todos los tópicos de dispositivos IoT
-      mqttClient.subscribe('iot/#', (err) => {
+      mqttClient.subscribe('smartSemaphore/lora_Device/#', (err) => {
         if (err) {
           console.error('Error al suscribirse a tópicos MQTT:', err);
         } else {
@@ -89,8 +103,15 @@ wss.on('connection', (ws) => {
         console.log('Tópico:', topic);
         console.log('Mensaje raw:', message.toString());
 
-        const data = JSON.parse(message.toString());
-        const deviceId = topic.split('/')[1]; // Asumiendo tópicos como 'iot/device1'
+        // Para mensajes que no son JSON, intentamos convertirlos
+        let data;
+        try {
+          data = JSON.parse(message.toString());
+        } catch {
+          data = { value: message.toString() };
+        }
+
+        const deviceId = topic.split('/')[2]; // Obtener el ID del dispositivo del tópico
 
         log(`Mensaje MQTT recibido en tópico ${topic}:`);
         console.log(JSON.stringify(data, null, 2));
@@ -129,16 +150,24 @@ wss.on('connection', (ws) => {
       console.error('Error en conexión MQTT:', error);
     });
 
+    mqttClient.on('close', () => {
+      log('Conexión MQTT cerrada, intentando reconectar...');
+    });
+
+    mqttClient.on('reconnect', () => {
+      log('Intentando reconexión MQTT...');
+    });
+
   } catch (error) {
     console.error('Error al configurar MQTT:', error);
     log('Error en la integración MQTT, pero el servidor continuará funcionando');
   }
 
   // Error handling middleware
-  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  app.use((err: any, _req: express.Request, res: express.Response) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Error interno del servidor";
-    res.status(status).json({ message });
+    res.json({ message });
     console.error(err);
   });
 
