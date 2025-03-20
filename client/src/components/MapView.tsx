@@ -59,7 +59,7 @@ const TrafficLayer = () => {
   };
 
   useEffect(() => {
-    const interval = setInterval(updateTrafficLayer, 30000);
+    const interval = setInterval(updateTrafficLayer, 10000); // Update every 10 seconds
     return () => clearInterval(interval);
   }, [map]);
 
@@ -68,24 +68,28 @@ const TrafficLayer = () => {
       {/* Capa de flujo de tráfico */}
       {viewMode === 'flow' && (
         <TileLayer
-          url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256&style=relative&liveTraffic=true&timeValidityMinutes=2`}
+          url={`https://{s}.api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256&style=relative&liveTraffic=true&timeValidityMinutes=1&refresh=true`}
           attribution='Traffic Data © <a href="https://www.tomtom.com">TomTom</a>'
           subdomains={['a', 'b', 'c', 'd']}
           maxZoom={22}
           opacity={opacity}
           zIndex={10}
+          updateInterval={10000}
+          keepBuffer={12}
         />
       )}
 
       {/* Capa de mapa de calor */}
       {viewMode === 'heatmap' && (
         <TileLayer
-          url={`https://{s}.api.tomtom.com/traffic/map/4/tile/heatmap/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256&style=absolute&liveTraffic=true&timeValidityMinutes=2`}
+          url={`https://{s}.api.tomtom.com/traffic/map/4/tile/heatmap/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}&tileSize=256&style=absolute&liveTraffic=true&timeValidityMinutes=1&refresh=true`}
           attribution='Traffic Data © <a href="https://www.tomtom.com">TomTom</a>'
           subdomains={['a', 'b', 'c', 'd']}
           maxZoom={22}
           opacity={opacity}
           zIndex={10}
+          updateInterval={10000}
+          keepBuffer={12}
         />
       )}
 
@@ -159,7 +163,7 @@ const TrafficLayer = () => {
         )}
 
         <div className="flex items-center gap-2 text-xs text-gray-600">
-          <div className={`w-2 h-2 rounded-full ${isUpdating ? 'bg-green-500' : 'bg-gray-400'}`} />
+          <div className={`w-2 h-2 rounded-full ${isUpdating ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
           Última actualización: {lastUpdate.toLocaleTimeString()}
         </div>
       </div>
@@ -177,9 +181,9 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
 
   return (
     <div className="h-[600px] w-full rounded-lg overflow-hidden shadow-lg relative">
-      <MapContainer 
-        center={trafficLights[0]?.position || [31.6904, -106.4245]} 
-        zoom={15} 
+      <MapContainer
+        center={trafficLights[0]?.position || [31.6904, -106.4245]}
+        zoom={15}
         style={{ height: '100%', width: '100%' }}
       >
         {/* Capa base de OpenStreetMap */}
@@ -194,7 +198,7 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
         {/* Grupo de marcadores de semáforos */}
         <LayerGroup>
           {trafficLights.map((light) => (
-            <Marker 
+            <Marker
               key={light.id}
               position={light.position}
               draggable={true}
@@ -211,7 +215,7 @@ const MapView: React.FC<MapViewProps> = ({ trafficLights, onPositionChange }) =>
                       <span>Estado IoT:</span>
                       <span className={`capitalize px-2 py-0.5 rounded text-xs ${
                         light.iotStatus === 'connected' ? 'bg-green-100 text-green-800' :
-                        light.iotStatus === 'disconnected' ? 'bg-gray-100 text-gray-800' : 'bg-red-100 text-red-800'
+                          light.iotStatus === 'disconnected' ? 'bg-gray-100 text-gray-800' : 'bg-red-100 text-red-800'
                       }`}>
                         {light.iotStatus}
                       </span>
