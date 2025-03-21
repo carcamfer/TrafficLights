@@ -52,19 +52,27 @@ wss.on('connection', (ws) => {
 });
 
 // Servidor MQTT
-const mqttClient = mqtt.connect('mqtt://localhost:1883', {
+const brokerConfig = {
+  host: '0.0.0.0',
+  port: 1883,
   clientId: 'traffic_server_' + Math.random().toString(16).substr(2, 8),
   clean: true,
-  reconnectPeriod: 1000,
-  connectTimeout: 5000,
+  reconnectPeriod: 5000,
+  connectTimeout: 10000,
   rejectUnauthorized: false
-});
+};
+
+log('Intentando conectar a MQTT broker:', `mqtt://${brokerConfig.host}:${brokerConfig.port}`);
+
+const mqttClient = mqtt.connect(`mqtt://${brokerConfig.host}:${brokerConfig.port}`, brokerConfig);
 
 mqttClient.on('connect', () => {
   log('===== Conexión MQTT establecida =====');
   mqttClient.subscribe('smartSemaphore/#', (err) => {
     if (err) {
       console.error('Error al suscribirse:', err);
+    } else {
+      log('Suscrito a smartSemaphore/#');
     }
   });
 });
@@ -112,32 +120,9 @@ mqttClient.on('message', (topic, message) => {
   }
 });
 
-app.get("/api/iot/debug", (_req, res) => {
-  res.json({
-    devices: Array.from(deviceStates.values()),
-    connectedClients: wss.clients.size,
-    timestamp: new Date().toISOString()
-  });
-});
-
-
-if (app.get("env") === "development") {
-  setupVite(app, server);
-} else {
-  serveStatic(app);
-}
-
 mqttClient.on('error', (error) => {
   console.error('Error en conexión MQTT:', error);
   log('Error MQTT:', error instanceof Error ? error.message : String(error));
-
-  // Intentar reconectar después de un error
-  setTimeout(() => {
-    log('Intentando reconexión después de error...');
-    mqttClient.end(true, () => {
-      mqttClient.reconnect();
-    });
-  }, 5000);
 });
 
 mqttClient.on('close', () => {
@@ -147,6 +132,12 @@ mqttClient.on('close', () => {
 mqttClient.on('reconnect', () => {
   log('Intentando reconexión MQTT...');
 });
+
+if (app.get("env") === "development") {
+  setupVite(app, server);
+} else {
+  serveStatic(app);
+}
 
 // Error handling middleware
 app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
