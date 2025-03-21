@@ -55,7 +55,6 @@ wss.on('connection', (ws) => {
   log('===== Iniciando conexión MQTT =====');
   const brokerUrls = [
     'mqtt://localhost:1883',
-    'mqtt://127.0.0.1:1883',
     'mqtt://0.0.0.0:1883'
   ];
   let currentBrokerIndex = 0;
@@ -70,7 +69,8 @@ wss.on('connection', (ws) => {
       keepalive: 60,
       clean: true,
       clientId: 'traffic_server_' + Math.random().toString(16).substr(2, 8),
-      rejectUnauthorized: false
+      rejectUnauthorized: false,
+      protocolVersion: 4  // Add MQTT v3.1.1 protocol version
     });
 
     mqttClient.on('connect', () => {
