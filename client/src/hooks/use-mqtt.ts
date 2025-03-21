@@ -1,9 +1,14 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type MQTTDevice = {
   deviceId: string;
   timestamp: string;
-  data: Record<string, any>;
+  data: {
+    cars_detected?: number;
+    time_red?: number;
+    time_yellow?: number;
+    time_green?: number;
+  };
   status: 'active' | 'inactive' | 'error';
 };
 
@@ -32,6 +37,12 @@ export function useMQTT() {
       console.log('WebSocket desconectado');
       setIsConnected(false);
       setError('Conexión WebSocket cerrada');
+
+      // Intentar reconectar después de 5 segundos
+      setTimeout(() => {
+        console.log('Intentando reconectar WebSocket...');
+        setWs(new WebSocket(`${protocol}//${window.location.host}`));
+      }, 5000);
     };
 
     wsClient.onerror = (event) => {
@@ -46,7 +57,6 @@ export function useMQTT() {
         const message = JSON.parse(event.data) as MQTTMessage;
 
         if (message.type === 'deviceStates') {
-          // Si recibimos un array de dispositivos, actualizamos todo el mapa
           const deviceArray = Array.isArray(message.data) ? message.data : [message.data];
           const newDevices = new Map();
           deviceArray.forEach(device => {
@@ -54,7 +64,6 @@ export function useMQTT() {
           });
           setDevices(newDevices);
         } else if (message.type === 'deviceUpdate') {
-          // Si recibimos una actualización de un dispositivo, actualizamos solo ese dispositivo
           const device = message.data as MQTTDevice;
           setDevices(prev => {
             const updated = new Map(prev);
@@ -76,28 +85,9 @@ export function useMQTT() {
     };
   }, []);
 
-  const sendCommand = useCallback((deviceId: string, command: any) => {
-    if (!isConnected) {
-      console.error('No hay conexión WebSocket');
-      return;
-    }
-
-    fetch(`/api/traffic/${deviceId}/command`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ command }),
-    }).catch(error => {
-      console.error('Error al enviar comando:', error);
-      setError('Error al enviar comando al servidor');
-    });
-  }, [isConnected]);
-
   return {
     isConnected,
     devices,
     error,
-    sendCommand,
   };
 }

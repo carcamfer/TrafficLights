@@ -26,11 +26,8 @@ function MQTTPanel() {
     );
   }
 
-  const formatValue = (value: any) => {
-    if (typeof value === 'string' && !isNaN(Number(value))) {
-      return `${Number(value)} segundos`;
-    }
-    return value;
+  const formatTimestamp = (timestamp: string) => {
+    return new Date(timestamp).toLocaleString();
   };
 
   return (
@@ -55,17 +52,41 @@ function MQTTPanel() {
                 </span>
               </div>
               <div className="space-y-1">
-                {Object.entries(device.data || {}).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{key}:</span>
+                {device.data.cars_detected !== undefined && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Vehículos detectados:</span>
                     <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
-                      {formatValue(value)}
+                      {device.data.cars_detected}
                     </span>
                   </div>
-                ))}
+                )}
+                {device.data.time_red !== undefined && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Tiempo Rojo:</span>
+                    <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
+                      {device.data.time_red}s
+                    </span>
+                  </div>
+                )}
+                {device.data.time_yellow !== undefined && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Tiempo Amarillo:</span>
+                    <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
+                      {device.data.time_yellow}s
+                    </span>
+                  </div>
+                )}
+                {device.data.time_green !== undefined && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Tiempo Verde:</span>
+                    <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
+                      {device.data.time_green}s
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="text-xs text-gray-500 mt-2">
-                Última actualización: {new Date(device.timestamp).toLocaleString()}
+                Última actualización: {formatTimestamp(device.timestamp)}
               </div>
             </div>
           ))}
