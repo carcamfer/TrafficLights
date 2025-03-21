@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MapView from './components/MapView';
 import TrafficLightControl from './components/TrafficLightControl';
 import { useMQTT } from './hooks/use-mqtt';
@@ -33,11 +33,11 @@ function MQTTPanel() {
   return (
     <div className="bg-white p-4 rounded-lg shadow">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Datos del Simulador</h2>
+        <h2 className="text-lg font-semibold">Estado del Sistema</h2>
         <span className={`px-2 py-1 rounded text-sm ${
           isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
         }`}>
-          MQTT: {isConnected ? 'Conectado' : 'Desconectado'}
+          {isConnected ? 'Conectado' : 'Desconectado'}
         </span>
       </div>
 
@@ -46,7 +46,7 @@ function MQTTPanel() {
           {Array.from(devices.values()).map(device => (
             <div key={device.deviceId} className="border rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Dispositivo:</span>
+                <span className="text-sm font-medium">ID Dispositivo:</span>
                 <span className="text-sm font-mono bg-gray-50 px-2 py-1 rounded">
                   {device.deviceId}
                 </span>
@@ -54,7 +54,7 @@ function MQTTPanel() {
               <div className="space-y-1">
                 {device.data.cars_detected !== undefined && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">Vehículos detectados:</span>
+                    <span className="font-medium">Vehículos:</span>
                     <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
                       {device.data.cars_detected}
                     </span>
@@ -86,14 +86,14 @@ function MQTTPanel() {
                 )}
               </div>
               <div className="text-xs text-gray-500 mt-2">
-                Última actualización: {formatTimestamp(device.timestamp)}
+                Actualizado: {formatTimestamp(device.timestamp)}
               </div>
             </div>
           ))}
         </div>
       ) : (
         <p className="text-sm text-gray-500">
-          {isConnected ? 'Esperando datos del simulador...' : 'Conectando al servidor MQTT...'}
+          {isConnected ? 'Esperando datos...' : 'Conectando al servidor...'}
         </p>
       )}
     </div>
@@ -101,40 +101,34 @@ function MQTTPanel() {
 }
 
 function App() {
-  const [trafficLights, setTrafficLights] = useState<TrafficLightData[]>([
-    {
-      id: 1,
-      position: [31.6904, -106.4245],
-      state: 'red',
-      iotStatus: 'connected',
-      inputGreen: 30,
-      feedbackGreen: 28,
-      inputRed: 45,
-      feedbackRed: 43
-    },
-    {
-      id: 2,
-      position: [31.6914, -106.4235],
-      state: 'green',
-      iotStatus: 'connected',
-      inputGreen: 35,
-      feedbackGreen: 33,
-      inputRed: 50,
-      feedbackRed: 48
-    },
-    {
-      id: 3,
-      position: [31.6894, -106.4255],
-      state: 'yellow',
-      iotStatus: 'error',
-      inputGreen: 25,
-      feedbackGreen: 0,
-      inputRed: 40,
-      feedbackRed: 0
-    }
-  ]);
+  const { devices, isConnected } = useMQTT();
+  const [trafficLights, setTrafficLights] = useState<TrafficLightData[]>([]);
 
-  const { isConnected, lastMessage } = useMQTT();
+  useEffect(() => {
+    console.log('Actualizando estado de semáforos:', devices);
+    const updatedLights = Array.from(devices.values()).map(device => {
+      // Determinar el estado del semáforo basado en los tiempos
+      let state: 'red' | 'yellow' | 'green' = 'red';
+      if (device.data.time_green && device.data.time_green > 0) {
+        state = 'green';
+      } else if (device.data.time_yellow && device.data.time_yellow > 0) {
+        state = 'yellow';
+      }
+
+      return {
+        id: parseInt(device.deviceId),
+        position: [31.6904, -106.4245], // Posición base
+        state,
+        iotStatus: device.status,
+        inputGreen: device.data.time_green || 30,
+        feedbackGreen: device.data.time_green || 0,
+        inputRed: device.data.time_red || 45,
+        feedbackRed: device.data.time_red || 0
+      };
+    });
+    console.log('Semáforos actualizados:', updatedLights);
+    setTrafficLights(updatedLights);
+  }, [devices]);
 
   const handleTimeChange = (id: number, type: 'inputGreen' | 'inputRed', value: number) => {
     setTrafficLights(prev =>
@@ -177,7 +171,7 @@ function App() {
                   <span className={`px-2 py-1 rounded text-sm ${
                     isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}>
-                    MQTT: {isConnected ? 'Conectado' : 'Desconectado'}
+                    {isConnected ? 'Conectado' : 'Desconectado'}
                   </span>
                 </div>
                 {trafficLights.map(light => (
