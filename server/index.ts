@@ -53,7 +53,7 @@ wss.on('connection', (ws) => {
 
   // Conectar al broker MQTT
   log('===== Iniciando conexión MQTT =====');
-  const mqttClient = mqtt.connect('mqtt://0.0.0.0:1883', {
+  const mqttClient = mqtt.connect('mqtt://127.0.0.1:1883', {
     reconnectPeriod: 5000,
     connectTimeout: 10000,
     keepalive: 60,
