@@ -1,0 +1,34 @@
+(myenv) ccampos6@DESKTOP-HTD4CT9:~/chirpstack/chirpstack-docker/configuration/mosquitto/config$ # 1. Instalar paho-mqtt en el entorno virtual
+pip inst(myenv) ccampos6@DESKTOP-HTD4CT9:~/chirpstack/chirpstack-docker/configuration/mosquitto/config$ pip install paho-mqtt==1.6.1
+# 2. Luego ejecutar el script
+python IOT_thing.py 1Collecting paho-mqtt==1.6.1
+  Downloading paho-mqtt-1.6.1.tar.gz (99 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 99.4/99.4 kB 1.9 MB/s eta 0:00:00
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... done
+Building wheels for collected packages: paho-mqtt
+  Building wheel for paho-mqtt (pyproject.toml) ... done
+  Created wheel for paho-mqtt: filename=paho_mqtt-1.6.1-py3-none-any.whl size=62199 sha256=b544ae27fb4a128c89aafb495950e5f6b67e3d7627a2b2e997629f1444f738b2
+  Stored in directory: /home/ccampos6/.cache/pip/wheels/23/d5/af/1f3cbcc350dec9d8e95040f388e0163d132eff0c9a453db659
+Successfully built paho-mqtt
+Installing collected packages: paho-mqtt
+  Attempting uninstall: paho-mqtt
+    Found existing installation: paho-mqtt 2.1.0
+    Uninstalling paho-mqtt-2.1.0:
+      Successfully uninstalled paho-mqtt-2.1.0
+Successfully installed paho-mqtt-1.6.1
+(myenv) ccampos6@DESKTOP-HTD4CT9:~/chirpstack/chirpstack-docker/configuration/mosquitto/config$
+(myenv) ccampos6@DESKTOP-HTD4CT9:~/chirpstack/chirpstack-docker/configuration/mosquitto/config$ # 2. Luego ejecutar el script
+(myenv) ccampos6@DESKTOP-HTD4CT9:~/chirpstack/chirpstack-docker/configuration/mosquitto/config$ python IOT_thing.py 1
+Red Light Time: 40 seconds
+Yellow Light Time: 40 seconds
+Green Light Time: 40 seconds
+Update Publisher: 1
+HEllo im the device 00000001
+Traceback (most recent call last):
+  File "/home/ccampos6/chirpstack/chirpstack-docker/configuration/mosquitto/config/IOT_thing.py", line 105, in <module>
+    mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,userdata=traffic_light)
+                        ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'paho.mqtt.client' has no attribute 'CallbackAPIVersion'
+(myenv) ccampos6@DESKTOP-HTD4CT9:~/chirpstack/chirpstack-docker/configuration/mosquitto/config$
