@@ -53,127 +53,108 @@ wss.on('connection', (ws) => {
 
   // Conectar al broker MQTT
   log('===== Iniciando conexión MQTT =====');
-  const brokerUrls = [
-    'mqtt://localhost:1883',
-    'mqtt://0.0.0.0:1883'
-  ];
-  let currentBrokerIndex = 0;
+  const mqttClient = mqtt.connect('mqtt://0.0.0.0:1883', {
+    reconnectPeriod: 5000,
+    connectTimeout: 10000,
+    keepalive: 60,
+    clean: true,
+    clientId: 'traffic_server_' + Math.random().toString(16).substr(2, 8),
+    protocolVersion: 4,  // MQTT v3.1.1
+    rejectUnauthorized: false
+  });
 
-  const connectToBroker = () => {
-    const brokerUrl = brokerUrls[currentBrokerIndex];
-    log(`Intentando conectar a broker MQTT: ${brokerUrl}`);
+  mqttClient.on('connect', () => {
+    log('===== Conexión MQTT establecida =====');
 
-    const mqttClient = mqtt.connect(brokerUrl, {
-      reconnectPeriod: 1000,
-      connectTimeout: 5000,
-      keepalive: 60,
-      clean: true,
-      clientId: 'traffic_server_' + Math.random().toString(16).substr(2, 8),
-      rejectUnauthorized: false,
-      protocolVersion: 4  // Add MQTT v3.1.1 protocol version
-    });
-
-    mqttClient.on('connect', () => {
-      log('===== Conexión MQTT establecida =====');
-      log(`Conectado exitosamente a: ${brokerUrl}`);
-
-      // Suscribirse al tópico base
-      const topic = 'smartSemaphore/#';
-      mqttClient.subscribe(topic, (err) => {
-        if (err) {
-          console.error(`Error al suscribirse al tópico ${topic}:`, err);
-        } else {
-          log(`Suscrito exitosamente al tópico: ${topic}`);
-        }
-      });
-    });
-
-    mqttClient.on('message', (topic, message) => {
-      try {
-        log('\n===== Nuevo Mensaje MQTT =====');
-        log('Tópico:', topic);
-        log('Mensaje:', message.toString());
-        log('Timestamp:', new Date().toISOString());
-
-        // Extraer deviceId y tipo de mensaje del tópico
-        const parts = topic.split('/');
-        const deviceId = parts[2] || 'unknown';
-        const messageType = parts[parts.length - 1];
-        const value = parseInt(message.toString());
-
-        log('Detalles del mensaje:');
-        log('- Device ID:', deviceId);
-        log('- Tipo de mensaje:', messageType);
-        log('- Valor:', value);
-
-        // Actualizar o crear el estado del dispositivo
-        const device = deviceStates.get(deviceId) || {
-          deviceId,
-          timestamp: new Date().toISOString(),
-          data: {},
-          status: 'active'
-        };
-
-        // Actualizar los datos según el tipo de mensaje
-        if (messageType === 'red' || messageType === 'yellow' || messageType === 'green') {
-          device.data[`time_${messageType}`] = value;
-          log(`Actualizado tiempo ${messageType}: ${value}`);
-        } else if (messageType === 'detect') {
-          device.data.cars_detected = value;
-          log(`Actualizado cars_detected: ${value}`);
-        }
-
-        device.timestamp = new Date().toISOString();
-        deviceStates.set(deviceId, device);
-
-        // Notificar a todos los clientes WebSocket
-        const wsMessage = JSON.stringify({
-          type: 'deviceUpdate',
-          data: device
-        });
-
-        log('Enviando actualización a clientes WebSocket:', wsMessage);
-
-        wss.clients.forEach((client) => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(wsMessage);
-          }
-        });
-
-      } catch (error) {
-        console.error('Error procesando mensaje MQTT:', error);
-        log('Error al procesar mensaje:', error.message);
+    // Suscribirse al tópico base
+    const topic = 'smartSemaphore/#';
+    mqttClient.subscribe(topic, (err) => {
+      if (err) {
+        console.error(`Error al suscribirse al tópico ${topic}:`, err);
+      } else {
+        log(`Suscrito exitosamente al tópico: ${topic}`);
       }
     });
+  });
 
-    mqttClient.on('error', (error) => {
-      console.error('Error en conexión MQTT:', error);
-      log('Error MQTT:', error.message);
-      log('Intentando reconectar en 1 segundo...');
+  mqttClient.on('message', (topic, message) => {
+    try {
+      log('\n===== Nuevo Mensaje MQTT =====');
+      log('Tópico:', topic);
+      log('Mensaje:', message.toString());
+      log('Timestamp:', new Date().toISOString());
 
-      // Intentar siguiente URL si hay error
-      currentBrokerIndex = (currentBrokerIndex + 1) % brokerUrls.length;
-      setTimeout(connectToBroker, 1000);
+      // Extraer deviceId y tipo de mensaje del tópico
+      const parts = topic.split('/');
+      const deviceId = parts[2] || 'unknown';
+      const messageType = parts[parts.length - 1];
+      const value = parseInt(message.toString());
 
-      mqttClient.end();
-    });
+      log('Detalles del mensaje:');
+      log('- Device ID:', deviceId);
+      log('- Tipo de mensaje:', messageType);
+      log('- Valor:', value);
 
-    mqttClient.on('close', () => {
-      log('Conexión MQTT cerrada, intentando reconectar...');
-    });
+      // Actualizar o crear el estado del dispositivo
+      const device = deviceStates.get(deviceId) || {
+        deviceId,
+        timestamp: new Date().toISOString(),
+        data: {},
+        status: 'active'
+      };
 
-    mqttClient.on('reconnect', () => {
-      log('Intentando reconexión MQTT...');
-    });
+      // Actualizar los datos según el tipo de mensaje
+      if (messageType === 'red' || messageType === 'yellow' || messageType === 'green') {
+        device.data[`time_${messageType}`] = value;
+        log(`Actualizado tiempo ${messageType}: ${value}`);
+      } else if (messageType === 'detect') {
+        device.data.cars_detected = value;
+        log(`Actualizado cars_detected: ${value}`);
+      }
 
-    return mqttClient;
-  };
+      device.timestamp = new Date().toISOString();
+      deviceStates.set(deviceId, device);
 
-  try {
-    connectToBroker();
-  } catch (error) {
-    console.error('Error al configurar MQTT:', error);
-  }
+      // Notificar a todos los clientes WebSocket
+      const wsMessage = JSON.stringify({
+        type: 'deviceUpdate',
+        data: device
+      });
+
+      log('Enviando actualización a clientes WebSocket:', wsMessage);
+
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(wsMessage);
+        }
+      });
+
+    } catch (error) {
+      console.error('Error procesando mensaje MQTT:', error);
+      log('Error al procesar mensaje:', error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  mqttClient.on('error', (error) => {
+    console.error('Error en conexión MQTT:', error);
+    log('Error MQTT:', error instanceof Error ? error.message : String(error));
+
+    // Intentar reconectar después de un error
+    setTimeout(() => {
+      log('Intentando reconexión después de error...');
+      mqttClient.end(true, () => {
+        mqttClient.reconnect();
+      });
+    }, 5000);
+  });
+
+  mqttClient.on('close', () => {
+    log('Conexión MQTT cerrada, intentando reconectar...');
+  });
+
+  mqttClient.on('reconnect', () => {
+    log('Intentando reconexión MQTT...');
+  });
 
   // Error handling middleware
   app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
