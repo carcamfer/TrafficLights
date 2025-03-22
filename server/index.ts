@@ -33,28 +33,34 @@ mqttClient.on('error', (error) => {
 
 // Función para transmitir logs a todos los clientes
 function broadcastLog(logEntry: string) {
+  log(`[Broadcast] Intentando enviar log: ${logEntry}`);
+  const activeClients = Array.from(wsServer.clients).filter(
+    client => client.readyState === WebSocket.OPEN
+  ).length;
+  log(`[Broadcast] Clientes WebSocket activos: ${activeClients}`);
+
   wsServer.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify({
+      const message = JSON.stringify({
         type: 'log',
         data: `${new Date().toLocaleTimeString()} - ${logEntry}`
-      }));
+      });
+      client.send(message);
+      log(`[Broadcast] Log enviado exitosamente`);
     }
   });
 }
 
 mqttClient.on('message', (topic, message) => {
   const logEntry = `${topic}: ${message.toString()}`;
-  log(logEntry);
+  log(`[MQTT] Mensaje recibido - ${logEntry}`);
   systemLogs.unshift(logEntry);
   broadcastLog(logEntry);
 });
 
-// === RUTAS API ===
-// Todas las rutas API deben ir antes de la configuración de Vite
-
 // API endpoint para obtener logs
 app.get("/api/logs", (_req, res) => {
+  log('[API] Solicitud de logs recibida');
   res.json(systemLogs);
 });
 
@@ -67,7 +73,7 @@ app.get("/api/status", (_req, res) => {
 app.post("/api/mqtt/publish", (req, res) => {
   try {
     const { topic, message } = req.body;
-    log(`Intentando publicar en ${topic}: ${message}`);
+    log(`[MQTT] Intentando publicar en ${topic}: ${message}`);
 
     mqttClient.publish(topic, message, (err) => {
       if (err) {
@@ -140,7 +146,13 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
     wsServer.handleUpgrade(request, socket, head, socket => {
       wsServer.emit('connection', socket, request);
       const logEntry = 'Nueva conexión WebSocket establecida';
-      log(logEntry);
+      log(`[WebSocket] ${logEntry}`);
+      socket.on('error', (error) => {
+        log(`[WebSocket] Error en la conexión: ${error.message}`);
+      });
+      socket.on('close', () => {
+        log('[WebSocket] Conexión cerrada');
+      });
       systemLogs.unshift(logEntry);
       broadcastLog(logEntry);
     });
