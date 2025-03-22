@@ -26,7 +26,7 @@ app.get("/api/devices", (_req, res) => {
 // Configuración del servidor
 const port = process.env.PORT || 5000;
 const server = app.listen(Number(port), '0.0.0.0', () => {
-  log(`Servidor ejecutándose en puerto ${port}`);
+  log(`Servidor ejecutándose en http://0.0.0.0:${port}`);
 });
 
 // WebSocket Server
@@ -34,6 +34,8 @@ const wss = new WebSocketServer({
   server,
   path: '/ws'
 });
+
+log('WebSocket Server iniciado en /ws');
 
 // Broadcast to all clients
 const broadcast = (message: any) => {
@@ -119,8 +121,10 @@ mqttClient.on('message', (topic, message) => {
     if (messageType === 'cars' && subType === 'detect') {
       device.data.cars_detected = value;
       device.timestamp = new Date().toISOString();
+      deviceStates.set(deviceId, device);
 
       log('Dispositivo actualizado:', device);
+      log('Estado actual de deviceStates:', Array.from(deviceStates.entries()));
 
       // Enviar actualización a todos los clientes
       broadcast({
@@ -140,14 +144,6 @@ mqttClient.on('error', (error) => {
   log('Error MQTT:', error instanceof Error ? error.message : String(error));
 });
 
-mqttClient.on('close', () => {
-  log('Conexión MQTT cerrada, intentando reconectar...');
-});
-
-mqttClient.on('reconnect', () => {
-  log('Intentando reconexión MQTT...');
-});
-
 if (app.get("env") === "development") {
   setupVite(app, server);
 } else {
@@ -156,9 +152,9 @@ if (app.get("env") === "development") {
 
 // Error handling middleware
 app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Error en la aplicación:', err);
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Error interno del servidor";
   res.status(status).json({ message });
-  console.error(err);
   next(err);
 });
