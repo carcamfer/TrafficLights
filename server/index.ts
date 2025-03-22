@@ -11,6 +11,9 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Estado de los dispositivos
+const deviceStates = new Map();
+
 // API Endpoints
 app.get("/api/status", (_req, res) => {
   res.json({ status: "ok", message: "Servidor funcionando" });
@@ -32,9 +35,14 @@ log('WebSocket Server iniciado en /ws');
 
 // Broadcast a todos los clientes
 const broadcast = (message: any) => {
+  log('Broadcasting:', message);
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(message));
+      try {
+        client.send(JSON.stringify(message));
+      } catch (error) {
+        console.error('Error al enviar mensaje WebSocket:', error);
+      }
     }
   });
 };
@@ -47,9 +55,6 @@ wss.on('connection', (ws) => {
     console.error('Error WebSocket:', error);
   });
 });
-
-// Estado de los dispositivos
-const deviceStates = new Map();
 
 // Servidor MQTT
 log('===== Iniciando conexión MQTT =====');
