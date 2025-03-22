@@ -79,7 +79,7 @@ app.get("/api/status", (_req, res) => {
     serveStatic(app);
   }
 
-  const port = 3000;
+  const port = 5000;
   const serverInstance = server.listen({
     port,
     host: "0.0.0.0",
