@@ -1,8 +1,9 @@
 import express from "express";
 import cors from "cors";
 import { WebSocket, WebSocketServer } from "ws";
-import { readFileSync, watchFile } from "fs";
-import { setupVite, serveStatic, log } from "./vite";
+import { log } from "./vite";
+import { setupVite, serveStatic } from "./vite";
+import './mqtt-simulator';
 
 const app = express();
 app.use(express.json());
@@ -15,59 +16,21 @@ const wsServer = new WebSocketServer({ noServer: true });
 let systemLogs: string[] = [];
 const MAX_LOGS = 10;
 
-// Función para leer los últimos logs de Mosquitto
-function getLatestMosquittoLogs(): string[] {
-  try {
-    const logContent = readFileSync('mosquitto.log', 'utf-8');
-    return logContent.split('\n')
-      .filter(line => line.trim())
-      .slice(-MAX_LOGS)
-      .reverse();
-  } catch (error) {
-    log(`[Error] No se pudo leer mosquitto.log: ${error}`);
-    return [];
-  }
-}
-
-// Actualizar y enviar logs cada segundo
-setInterval(() => {
-  const logs = getLatestMosquittoLogs();
-  if (logs.length > 0) {
-    systemLogs = logs;
-    broadcastLogs(logs);
-  }
-}, 1000);
-
 // Función para transmitir logs a todos los clientes WebSocket
 function broadcastLogs(logs: string[]) {
   wsServer.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify({
         type: 'log',
-        data: logs.join('\n')
+        data: logs
       }));
     }
   });
 }
 
-// Observar cambios en el archivo de logs
-watchFile('mosquitto.log', { interval: 1000 }, () => {
-  const latestLogs = getLatestMosquittoLogs();
-  if (latestLogs.length > 0) {
-    systemLogs = latestLogs;
-    broadcastLogs(latestLogs);
-  }
-});
-
 // API endpoint para obtener logs
 app.get("/api/logs", (_req, res) => {
-  const logs = getLatestMosquittoLogs();
-  res.json(logs);
-});
-
-// Basic API endpoint for testing
-app.get("/api/status", (_req, res) => {
-  res.json({ status: "ok", message: "Servidor de semáforos funcionando" });
+  res.json(systemLogs);
 });
 
 (async () => {
@@ -94,11 +57,10 @@ app.get("/api/status", (_req, res) => {
       log(`[WebSocket] Nueva conexión WebSocket establecida`);
 
       // Enviar logs actuales al cliente
-      const currentLogs = getLatestMosquittoLogs();
-      if (currentLogs.length > 0) {
+      if (systemLogs.length > 0) {
         socket.send(JSON.stringify({
           type: 'log',
-          data: currentLogs.join('\n')
+          data: systemLogs
         }));
       }
 
@@ -113,16 +75,23 @@ app.get("/api/status", (_req, res) => {
   });
 })();
 
-// Middleware for logging API requests
+// Middleware para logging
 app.use((req, res, next) => {
-  const start = Date.now();
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (req.path.startsWith("/api")) {
-      log(`[API] ${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
-    }
-  });
+  if (req.path.startsWith("/api")) {
+    log(`[API] ${req.method} ${req.path}`);
+  }
   next();
+});
+
+// Para actualizar los logs desde el cliente MQTT
+export function updateSystemLogs(message: string) {
+  systemLogs = [message, ...systemLogs.slice(0, MAX_LOGS - 1)];
+  broadcastLogs(systemLogs);
+}
+
+// Basic API endpoint for testing
+app.get("/api/status", (_req, res) => {
+  res.json({ status: "ok", message: "Servidor de semáforos funcionando" });
 });
 
 // Error handling middleware

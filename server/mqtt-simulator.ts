@@ -1,29 +1,25 @@
 import * as mqtt from 'mqtt';
 import { log } from "./vite";
 
-const client = mqtt.connect('mqtt://localhost:1883');
-
-function generateRandomCarCount() {
-  return Math.floor(Math.random() * 50);
-}
+// Conectar al broker MQTT local
+const client = mqtt.connect('mqtt://DESKTOP-HTD4CT9.local:1883');
 
 client.on('connect', () => {
-  log('[MQTT] Simulador conectado al broker');
-  
-  // Generar mensajes cada 5 segundos
-  setInterval(() => {
-    const deviceId = '00000001';
-    const carCount = generateRandomCarCount();
-    const topic = `smartSemaphore/lora_Device/${deviceId}/info/cars/detect`;
-    
-    client.publish(topic, carCount.toString(), { qos: 0 }, (error) => {
-      if (error) {
-        log(`[MQTT] Error al publicar: ${error}`);
-      } else {
-        log(`[MQTT] Publicado: ${topic} ${carCount}`);
-      }
-    });
-  }, 5000);
+  log('[MQTT] Conectado al broker local');
+
+  // Suscribirse al tópico de semáforos
+  client.subscribe('smartSemaphore/#', (err) => {
+    if (err) {
+      log(`[MQTT] Error al suscribirse: ${err}`);
+    } else {
+      log('[MQTT] Suscrito a smartSemaphore/#');
+    }
+  });
+});
+
+client.on('message', (topic, message) => {
+  // Log del mensaje en el formato deseado
+  log(`${topic} ${message.toString()}`);
 });
 
 client.on('error', (error) => {

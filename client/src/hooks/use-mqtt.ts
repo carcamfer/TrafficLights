@@ -44,7 +44,9 @@ export function useMQTT() {
         console.log('[WebSocket] Mensaje recibido:', event.data);
         const data = JSON.parse(event.data);
         if (data.type === 'log') {
-          setLastMessage(data);
+          const lastLine = data.data[0]; // Tomar el último mensaje recibido
+          const [topic, message] = lastLine.split(' ');
+          setLastMessage({ topic, message });
         }
       } catch (error) {
         console.error('[WebSocket] Error al procesar mensaje:', error);
