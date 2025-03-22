@@ -22,6 +22,12 @@ function getLatestMosquittoLogs(): string[] {
       .filter(line => line.trim())
       // Solo incluir mensajes que coincidan con el patrón deseado
       .filter(line => line.includes('smartSemaphore/lora_Device') && line.includes('/info/cars/detect'))
+      // Extraer solo el tópico y el valor
+      .map(line => {
+        const match = line.match(/smartSemaphore\/lora_Device\/.*\/info\/cars\/detect\s+(\d+)/);
+        return match ? match[0] : null;
+      })
+      .filter(line => line !== null)
       .slice(-10)
       .reverse();
   } catch (error) {
