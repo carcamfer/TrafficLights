@@ -13,8 +13,7 @@ export function useMQTT() {
 
   const connect = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    console.log('[WebSocket] Intentando conectar...');
-    const wsClient = new WebSocket(`${protocol}//${window.location.host}`);
+    const wsClient = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
     wsClient.onopen = () => {
       console.log('[WebSocket] Conexión establecida');
@@ -25,9 +24,7 @@ export function useMQTT() {
     wsClient.onclose = () => {
       console.log('[WebSocket] Conexión cerrada');
       setIsConnected(false);
-      // Intentar reconectar después de un retraso exponencial
       const delay = Math.min(1000 * Math.pow(2, reconnectAttempt), 30000);
-      console.log(`[WebSocket] Intentando reconectar en ${delay}ms`);
       setTimeout(() => {
         setReconnectAttempt(prev => prev + 1);
         connect();
@@ -41,7 +38,6 @@ export function useMQTT() {
 
     wsClient.onmessage = (event) => {
       try {
-        console.log('[WebSocket] Mensaje recibido:', event.data);
         const data = JSON.parse(event.data);
         if (data.type === 'log') {
           setLastMessage(data);
@@ -54,7 +50,6 @@ export function useMQTT() {
     setWs(wsClient);
 
     return () => {
-      console.log('[WebSocket] Limpiando conexión');
       wsClient.close();
     };
   }, [reconnectAttempt]);
@@ -64,20 +59,8 @@ export function useMQTT() {
     return cleanup;
   }, [connect]);
 
-  const sendCommand = useCallback((deviceId: number, command: any) => {
-    console.log(`[MQTT] Enviando comando al dispositivo ${deviceId}:`, command);
-    fetch(`/api/traffic/${deviceId}/command`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ command }),
-    });
-  }, []);
-
   return {
     isConnected,
     lastMessage,
-    sendCommand,
   };
 }

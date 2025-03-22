@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
-// Configuración MQTT con opciones específicas
+// Configuración MQTT
 const mqttClient = mqtt.connect('mqtt://localhost:1883', {
   clientId: 'traffic_control_server_' + Math.random().toString(16).substr(2, 8),
   clean: true,
@@ -19,49 +19,35 @@ const mqttClient = mqtt.connect('mqtt://localhost:1883', {
   resubscribe: true
 });
 
-const wsServer = new WebSocket.Server({ noServer: true });
-
-// Almacenar los últimos logs
+const wsServer = new WebSocket.Server({ noServer: true, path: '/ws' });
 let systemLogs: string[] = [];
 
 mqttClient.on('connect', () => {
-  mqttClient.subscribe('#'); // Subscribe to all topics
+  mqttClient.subscribe('#');
 });
 
 mqttClient.on('error', (error) => {
-  log(`Error MQTT: ${error.message}`);
+  console.error(`Error MQTT: ${error.message}`);
 });
 
-// Función para transmitir logs a todos los clientes
-function broadcastLog(logEntry: string) {
-  // Mantener solo los últimos 10 logs
+mqttClient.on('message', (topic, message) => {
+  const logEntry = `${topic} ${message.toString()}`;
   if (systemLogs.length >= 10) {
-    systemLogs.pop(); // Eliminar el log más antiguo
+    systemLogs.pop();
   }
   systemLogs.unshift(logEntry);
 
   wsServer.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
-      const message = JSON.stringify({
-        type: 'log',
-        data: logEntry
-      });
-      client.send(message);
+      client.send(logEntry); // Simplified message sending
     }
   });
-}
-
-mqttClient.on('message', (topic, message) => {
-  const logEntry = `${topic} ${message.toString()}`; 
-  broadcastLog(logEntry);
 });
 
-// API endpoint para obtener logs
 app.get("/api/logs", (_req, res) => {
   res.json(systemLogs);
 });
 
-// Basic API endpoint for testing
 app.get("/api/status", (_req, res) => {
   res.json({ status: "ok", message: "Servidor de semáforos funcionando" });
 });
@@ -70,7 +56,6 @@ app.get("/api/status", (_req, res) => {
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Error interno del servidor";
-  log(`Error: ${message}`);
   res.status(status).json({ message });
 });
 
@@ -88,19 +73,21 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
     port,
     host: "0.0.0.0",
   }, () => {
-    log(`Servidor ejecutándose en el puerto ${port}`);
+    console.log(`Servidor ejecutándose en el puerto ${port}`);
   });
 
-  // Configurar WebSocket Server
+  // Configurar WebSocket Server con path específico
   serverInstance.on('upgrade', (request, socket, head) => {
-    wsServer.handleUpgrade(request, socket, head, socket => {
-      wsServer.emit('connection', socket, request);
-      socket.on('error', (error) => {
-        log(`[WebSocket] Error en la conexión: ${error.message}`);
+    if (request.url === '/ws') {
+      wsServer.handleUpgrade(request, socket, head, socket => {
+        wsServer.emit('connection', socket, request);
+        socket.on('error', (error) => {
+          console.error(`[WebSocket] Error en la conexión: ${error.message}`);
+        });
+        socket.on('close', () => {
+          console.log('[WebSocket] Conexión cerrada');
+        });
       });
-      socket.on('close', () => {
-        log('[WebSocket] Conexión cerrada');
-      });
-    });
+    }
   });
 })();
