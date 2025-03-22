@@ -29,23 +29,35 @@ const server = app.listen(Number(port), '0.0.0.0', () => {
   log(`Servidor ejecutándose en puerto ${port}`);
 });
 
-// Create WebSocket server with specific path
+// WebSocket Server
 const wss = new WebSocketServer({ 
   server,
   path: '/ws'
 });
+
+// Broadcast to all clients
+const broadcast = (message: any) => {
+  const messageStr = JSON.stringify(message);
+  log('Broadcasting message:', messageStr);
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(messageStr);
+    }
+  });
+};
 
 // Manejo de conexiones WebSocket
 wss.on('connection', (ws) => {
   log('Nueva conexión WebSocket establecida');
 
   // Enviar estado actual al cliente
-  const currentState = {
+  const currentDevices = Array.from(deviceStates.values());
+  log('Estado actual de dispositivos:', JSON.stringify(currentDevices));
+
+  ws.send(JSON.stringify({
     type: 'deviceStates',
-    data: Array.from(deviceStates.values())
-  };
-  log('Enviando estado inicial al cliente:', JSON.stringify(currentState));
-  ws.send(JSON.stringify(currentState));
+    data: currentDevices
+  }));
 
   ws.on('error', (error) => {
     console.error('Error WebSocket:', error);
@@ -60,8 +72,7 @@ const mqttClient = mqtt.connect('mqtt://localhost:1883', {
   reconnectPeriod: 1000,
   connectTimeout: 4000,
   protocolVersion: 4,
-  keepalive: 60,
-  rejectUnauthorized: false
+  keepalive: 60
 });
 
 mqttClient.on('connect', () => {
@@ -69,7 +80,6 @@ mqttClient.on('connect', () => {
   mqttClient.subscribe('smartSemaphore/#', (err) => {
     if (err) {
       console.error('Error al suscribirse:', err);
-      log('Error de suscripción:', err.message);
     } else {
       log('Suscrito exitosamente a smartSemaphore/#');
     }
@@ -81,40 +91,43 @@ mqttClient.on('message', (topic, message) => {
     log(`Mensaje MQTT recibido - Tópico: ${topic}, Mensaje: ${message.toString()}`);
 
     const parts = topic.split('/');
-    const deviceId = parts[2]; // "00000001"
-    const messageType = parts[4]; // "cars"
-    const subType = parts[5];    // "detect"
-    const value = parseInt(message.toString());
-
-    // Actualizar estado del dispositivo
-    const device = deviceStates.get(deviceId) || {
-      deviceId,
-      timestamp: new Date().toISOString(),
-      data: {},
-      status: 'connected'
-    };
-
-    if (messageType === 'cars' && subType === 'detect') {
-      device.data.cars_detected = value;
+    if (parts.length < 6) {
+      log('Formato de tópico inválido:', topic);
+      return;
     }
 
-    device.timestamp = new Date().toISOString();
-    deviceStates.set(deviceId, device);
+    const deviceId = parts[2];
+    const messageType = parts[4];
+    const subType = parts[5];
+    const value = parseInt(message.toString());
 
-    // Enviar actualización a todos los clientes
-    const wsMessage = JSON.stringify({
-      type: 'deviceUpdate',
-      data: device
-    });
+    log('Procesando mensaje:', { deviceId, messageType, subType, value });
 
-    log('Estado actual de dispositivos:', JSON.stringify(Array.from(deviceStates.entries())));
-    log('Enviando actualización WebSocket:', wsMessage);
+    // Inicializar o actualizar estado del dispositivo
+    let device = deviceStates.get(deviceId);
+    if (!device) {
+      device = {
+        deviceId,
+        timestamp: new Date().toISOString(),
+        data: {},
+        status: 'connected'
+      };
+      deviceStates.set(deviceId, device);
+    }
 
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(wsMessage);
-      }
-    });
+    // Actualizar datos según el tipo de mensaje
+    if (messageType === 'cars' && subType === 'detect') {
+      device.data.cars_detected = value;
+      device.timestamp = new Date().toISOString();
+
+      log('Dispositivo actualizado:', device);
+
+      // Enviar actualización a todos los clientes
+      broadcast({
+        type: 'deviceUpdate',
+        data: device
+      });
+    }
 
   } catch (error) {
     console.error('Error procesando mensaje:', error);

@@ -43,44 +43,20 @@ function MQTTPanel() {
 
       {devices.size > 0 ? (
         <div className="space-y-4">
-          {Array.from(devices.values()).map(device => (
-            <div key={device.deviceId} className="border rounded-lg p-3 space-y-2">
+          {Array.from(devices.entries()).map(([deviceId, device]) => (
+            <div key={deviceId} className="border rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">ID Dispositivo:</span>
                 <span className="text-sm font-mono bg-gray-50 px-2 py-1 rounded">
-                  {device.deviceId}
+                  {deviceId}
                 </span>
               </div>
               <div className="space-y-1">
                 {device.data.cars_detected !== undefined && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">Vehículos:</span>
+                    <span className="font-medium">Vehículos detectados:</span>
                     <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
                       {device.data.cars_detected}
-                    </span>
-                  </div>
-                )}
-                {device.data.time_red !== undefined && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">Tiempo Rojo:</span>
-                    <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
-                      {device.data.time_red}s
-                    </span>
-                  </div>
-                )}
-                {device.data.time_yellow !== undefined && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">Tiempo Amarillo:</span>
-                    <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
-                      {device.data.time_yellow}s
-                    </span>
-                  </div>
-                )}
-                {device.data.time_green !== undefined && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">Tiempo Verde:</span>
-                    <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
-                      {device.data.time_green}s
                     </span>
                   </div>
                 )}
@@ -93,7 +69,7 @@ function MQTTPanel() {
         </div>
       ) : (
         <p className="text-sm text-gray-500">
-          {isConnected ? 'Esperando datos...' : 'Conectando al servidor...'}
+          {isConnected ? 'Esperando datos de los dispositivos...' : 'Conectando al servidor...'}
         </p>
       )}
     </div>
