@@ -53,7 +53,7 @@ wss.on('connection', (ws) => {
 
 // Servidor MQTT
 const brokerConfig = {
-  host: '0.0.0.0',
+  host: 'localhost',  // Cambiado a localhost para coincidir con el simulador
   port: 1883,
   clientId: 'traffic_server_' + Math.random().toString(16).substr(2, 8),
   clean: true,
