@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MapView from './components/MapView';
 import TrafficLightControl from './components/TrafficLightControl';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface TrafficLightData {
   id: number;
@@ -47,6 +48,51 @@ function App() {
     }
   ]);
 
+  const [systemLogs, setSystemLogs] = useState<string[]>([]);
+  const [wsConnected, setWsConnected] = useState(false);
+
+  useEffect(() => {
+    // Usar el protocolo correspondiente basado en la conexión actual
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+    const connectWebSocket = () => {
+      ws.onopen = () => {
+        console.log('WebSocket conectado');
+        setWsConnected(true);
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket desconectado');
+        setWsConnected(false);
+        // Intentar reconectar después de 5 segundos
+        setTimeout(connectWebSocket, 5000);
+      };
+
+      ws.onerror = (error) => {
+        console.error('Error de WebSocket:', error);
+        setWsConnected(false);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'log') {
+            setSystemLogs(prev => [data.data, ...prev.slice(0, 99)]);
+          }
+        } catch (error) {
+          console.error('Error al procesar mensaje:', error);
+        }
+      };
+    };
+
+    connectWebSocket();
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
   const handleTimeChange = (id: number, type: 'inputGreen' | 'inputRed', value: number) => {
     setTrafficLights(prev =>
       prev.map(light =>
@@ -71,30 +117,67 @@ function App() {
         </div>
       </header>
       <main className="max-w-7xl mx-auto py-6 px-4">
-        <div className="flex gap-6">
-          <div className="flex-1">
+        <div className="grid grid-cols-12 gap-6">
+          {/* Mapa */}
+          <div className="col-span-7">
             <MapView 
               trafficLights={trafficLights} 
               onPositionChange={handlePositionChange}
             />
           </div>
-          <div className="w-80">
-            <div className="bg-white p-4 rounded-lg shadow">
-              <h2 className="text-lg font-semibold mb-4">Control de Tiempos</h2>
-              {trafficLights.map(light => (
-                <TrafficLightControl
-                  key={light.id}
-                  id={light.id}
-                  state={light.state}
-                  iotStatus={light.iotStatus}
-                  inputGreen={light.inputGreen}
-                  feedbackGreen={light.feedbackGreen}
-                  inputRed={light.inputRed}
-                  feedbackRed={light.feedbackRed}
-                  onTimeChange={handleTimeChange}
-                />
-              ))}
-            </div>
+
+          {/* Controles */}
+          <div className="col-span-3">
+            <Card>
+              <CardHeader>
+                <CardTitle>Control de Tiempos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {trafficLights.map(light => (
+                    <TrafficLightControl
+                      key={light.id}
+                      id={light.id}
+                      state={light.state}
+                      iotStatus={light.iotStatus}
+                      inputGreen={light.inputGreen}
+                      feedbackGreen={light.feedbackGreen}
+                      inputRed={light.inputRed}
+                      feedbackRed={light.feedbackRed}
+                      onTimeChange={handleTimeChange}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Estado del Sistema */}
+          <div className="col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Estado del Sistema</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className={`px-2 py-1 rounded-md text-sm ${
+                    wsConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    WebSocket: {wsConnected ? 'Conectado' : 'Desconectado'}
+                  </div>
+                  <div className="h-[500px] overflow-y-auto space-y-2 text-xs font-mono">
+                    {systemLogs.map((log, index) => (
+                      <div 
+                        key={index} 
+                        className="p-2 bg-gray-50 rounded border border-gray-200 break-all"
+                      >
+                        {log}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>
