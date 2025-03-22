@@ -52,8 +52,9 @@ function App() {
   const [wsConnected, setWsConnected] = useState(false);
 
   useEffect(() => {
-    const ws = new WebSocket('ws://0.0.0.0:3000');
-    
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}`);
+
     const connectWebSocket = () => {
       ws.onopen = () => {
         console.log('WebSocket conectado');
@@ -76,7 +77,7 @@ function App() {
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'log') {
-            const logLines = data.data.split('\n').filter(line => line.trim());
+            const logLines = data.data.split('\n').filter((line: string) => line.trim());
             setSystemLogs(prev => [...logLines].slice(0, 10));
           }
         } catch (error) {
