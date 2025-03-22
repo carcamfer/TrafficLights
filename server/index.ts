@@ -35,7 +35,7 @@ log('WebSocket Server iniciado en /ws');
 
 // Broadcast a todos los clientes
 const broadcast = (message: any) => {
-  log('Broadcasting:', message);
+  log('Broadcasting:', JSON.stringify(message));
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       try {
@@ -68,12 +68,12 @@ wss.on('connection', (ws) => {
 
 // Servidor MQTT
 log('===== Iniciando conexión MQTT =====');
-const mqttClient = mqtt.connect('mqtt://127.0.0.1:1883', {
+const mqttClient = mqtt.connect('mqtt://localhost:1883', {
   clientId: 'traffic_server_' + Math.random().toString(16).substr(2, 8),
   clean: true,
   reconnectPeriod: 1000,
   connectTimeout: 4000,
-  protocolVersion: 4
+  keepalive: 60
 });
 
 mqttClient.on('connect', () => {
