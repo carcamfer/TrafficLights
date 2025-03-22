@@ -25,8 +25,8 @@ const wsServer = new WebSocket.Server({ noServer: true });
 let systemLogs: string[] = [];
 
 mqttClient.on('connect', () => {
-  // Subscribe to the specific vehicle detection topic
-  mqttClient.subscribe('smartSemaphore/lora_Device/00000001/info/cars/detect'); 
+  // Subscribe to all topics to capture all Mosquitto messages
+  mqttClient.subscribe('#'); 
 });
 
 mqttClient.on('error', (error) => {
@@ -66,20 +66,6 @@ app.get("/api/logs", (_req, res) => {
 // Basic API endpoint for testing
 app.get("/api/status", (_req, res) => {
   res.json({ status: "ok", message: "Servidor de semáforos funcionando" });
-});
-
-
-// Middleware for logging API requests
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (req.path.startsWith("/api")) {
-      const logEntry = `${req.method} ${req.path} ${res.statusCode} ${duration}ms`;
-      log(logEntry);
-    }
-  });
-  next();
 });
 
 // Error handling middleware
