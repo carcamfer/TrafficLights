@@ -52,7 +52,7 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Configuración MQTT - usando la misma configuración que el simulador Python
+// Servidor MQTT
 log('===== Iniciando conexión MQTT =====');
 const mqttClient = mqtt.connect('mqtt://localhost:1883', {
   clientId: 'traffic_server_' + Math.random().toString(16).substr(2, 8),
@@ -81,18 +81,10 @@ mqttClient.on('message', (topic, message) => {
     log(`Mensaje MQTT recibido - Tópico: ${topic}, Mensaje: ${message.toString()}`);
 
     const parts = topic.split('/');
-    const deviceId = parts[2];
-    const messageType = parts[4]; // cars o time
-    const subType = parts[5];    // detect o light type
+    const deviceId = parts[2]; // "00000001"
+    const messageType = parts[4]; // "cars"
+    const subType = parts[5];    // "detect"
     const value = parseInt(message.toString());
-
-    log('Procesando mensaje:', {
-      topic,
-      deviceId,
-      messageType,
-      subType,
-      value
-    });
 
     // Actualizar estado del dispositivo
     const device = deviceStates.get(deviceId) || {
@@ -104,9 +96,6 @@ mqttClient.on('message', (topic, message) => {
 
     if (messageType === 'cars' && subType === 'detect') {
       device.data.cars_detected = value;
-    } else if (messageType === 'time' && subType === 'light') {
-      const lightType = parts[6]; // red, yellow, green
-      device.data[`time_${lightType}`] = value;
     }
 
     device.timestamp = new Date().toISOString();
@@ -121,14 +110,11 @@ mqttClient.on('message', (topic, message) => {
     log('Estado actual de dispositivos:', JSON.stringify(Array.from(deviceStates.entries())));
     log('Enviando actualización WebSocket:', wsMessage);
 
-    let clientCount = 0;
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(wsMessage);
-        clientCount++;
       }
     });
-    log(`Mensaje enviado a ${clientCount} clientes WebSocket`);
 
   } catch (error) {
     console.error('Error procesando mensaje:', error);
