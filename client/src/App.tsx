@@ -17,6 +17,21 @@ interface TrafficLightData {
 
 function MQTTPanel() {
   const { isConnected, devices, error } = useMQTT();
+  const [logs, setLogs] = useState<string[]>([]);
+
+  // Agregar logs al estado
+  useEffect(() => {
+    const handleLog = (message: string) => {
+      setLogs(prev => [...prev.slice(-50), new Date().toLocaleTimeString() + ': ' + message]);
+    };
+
+    // Suscribirse a los logs
+    window.addEventListener('mqtt-log', (e: any) => handleLog(e.detail));
+
+    return () => {
+      window.removeEventListener('mqtt-log', (e: any) => handleLog(e.detail));
+    };
+  }, []);
 
   if (error) {
     return (
@@ -25,10 +40,6 @@ function MQTTPanel() {
       </div>
     );
   }
-
-  const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString();
-  };
 
   return (
     <div className="bg-white p-4 rounded-lg shadow">
@@ -39,6 +50,13 @@ function MQTTPanel() {
         }`}>
           {isConnected ? 'Conectado' : 'Desconectado'}
         </span>
+      </div>
+
+      {/* Panel de Logs */}
+      <div className="mb-4 p-2 bg-gray-50 rounded-lg h-40 overflow-auto text-xs font-mono">
+        {logs.map((log, i) => (
+          <div key={i} className="whitespace-pre-wrap">{log}</div>
+        ))}
       </div>
 
       {devices.size > 0 ? (
@@ -62,7 +80,7 @@ function MQTTPanel() {
                 )}
               </div>
               <div className="text-xs text-gray-500 mt-2">
-                Actualizado: {formatTimestamp(device.timestamp)}
+                Actualizado: {new Date(device.timestamp).toLocaleString()}
               </div>
             </div>
           ))}

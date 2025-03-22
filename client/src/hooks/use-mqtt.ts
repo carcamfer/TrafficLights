@@ -17,13 +17,18 @@ interface MQTTMessage {
   data: MQTTDevice | MQTTDevice[];
 }
 
+// Función auxiliar para emitir logs
+const emitLog = (message: string) => {
+  window.dispatchEvent(new CustomEvent('mqtt-log', { detail: message }));
+};
+
 export function useMQTT() {
   const [devices, setDevices] = useState<Map<string, MQTTDevice>>(new Map());
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const updateDevices = useCallback((device: MQTTDevice) => {
-    console.log('Actualizando dispositivo:', device);
+    emitLog(`Actualizando dispositivo: ${device.deviceId} con datos: ${JSON.stringify(device.data)}`);
     setDevices(prev => {
       const updated = new Map(prev);
       updated.set(device.deviceId, {
@@ -40,38 +45,38 @@ export function useMQTT() {
     function connect() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/ws`;
-      console.log('Conectando a WebSocket:', wsUrl);
+      emitLog(`Conectando a WebSocket: ${wsUrl}`);
 
       ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
-        console.log('WebSocket conectado exitosamente');
+        emitLog('WebSocket conectado exitosamente');
         setIsConnected(true);
         setError(null);
       };
 
       ws.onclose = () => {
-        console.log('WebSocket desconectado, intentando reconectar...');
+        emitLog('WebSocket desconectado, intentando reconectar...');
         setIsConnected(false);
         setError('Conexión perdida, reconectando...');
         setTimeout(connect, 2000);
       };
 
       ws.onerror = (error) => {
-        console.error('Error en WebSocket:', error);
+        emitLog(`Error en WebSocket: ${error}`);
         setError('Error de conexión');
         setIsConnected(false);
       };
 
       ws.onmessage = (event) => {
         try {
-          console.log('Mensaje WebSocket recibido:', event.data);
+          emitLog(`Mensaje WebSocket recibido: ${event.data}`);
           const message = JSON.parse(event.data) as MQTTMessage;
-          console.log('Mensaje procesado:', message);
+          emitLog(`Mensaje procesado: ${JSON.stringify(message)}`);
 
           if (message.type === 'deviceStates') {
             const deviceArray = Array.isArray(message.data) ? message.data : [message.data];
-            console.log('Actualizando lista de dispositivos:', deviceArray);
+            emitLog(`Actualizando lista de dispositivos: ${JSON.stringify(deviceArray)}`);
             const newDevices = new Map();
             deviceArray.forEach(device => {
               newDevices.set(device.deviceId, device);
@@ -79,13 +84,13 @@ export function useMQTT() {
             setDevices(newDevices);
           } else if (message.type === 'deviceUpdate') {
             const device = message.data as MQTTDevice;
-            console.log('Actualizando dispositivo individual:', device);
+            emitLog(`Actualizando dispositivo individual: ${JSON.stringify(device)}`);
             updateDevices(device);
           }
 
           setError(null);
         } catch (error) {
-          console.error('Error procesando mensaje:', error);
+          emitLog(`Error procesando mensaje: ${error}`);
           setError('Error procesando datos');
         }
       };
