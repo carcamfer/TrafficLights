@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import WebSocket from "ws";
+import { WebSocketServer } from "ws";
 import { readFileSync, watchFile } from "fs";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
-const wsServer = new WebSocket.Server({ noServer: true });
+const wsServer = new WebSocketServer({ noServer: true });
 
 // Almacenar los últimos logs
 let systemLogs: string[] = [];
@@ -31,7 +31,7 @@ function getLatestMosquittoLogs(): string[] {
 // Función para transmitir logs a todos los clientes WebSocket
 function broadcastLogs(logs: string[]) {
   wsServer.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
+    if (client.readyState === WebSocketServer.OPEN) {
       client.send(JSON.stringify({
         type: 'log',
         data: logs.join('\n')
