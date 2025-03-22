@@ -78,7 +78,8 @@ function App() {
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'log') {
-            setSystemLogs(prev => [data.data, ...prev.slice(0, 9)]); // Mantener solo los últimos 10 logs
+            const logLines = data.data.split('\n').filter(line => line.trim());
+            setSystemLogs(prev => [...logLines, ...prev].slice(0, 50));
           }
         } catch (error) {
           console.error('Error al procesar mensaje:', error);
