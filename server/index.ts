@@ -9,92 +9,52 @@ app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
-// MQTT Configuration
-const mqttClient = mqtt.connect('mqtt://localhost:1883', {
-  clientId: 'traffic_control_server_' + Math.random().toString(16).substr(2, 8),
-  clean: true,
-  connectTimeout: 4000,
-  reconnectPeriod: 1000,
-  keepalive: 60,
-  resubscribe: true
-});
-
-const wsServer = new WebSocket.Server({ noServer: true, path: '/ws' });
-let systemLogs: string[] = [];
+const mqttClient = mqtt.connect('mqtt://localhost:1883');
+const wsServer = new WebSocket.Server({ noServer: true });
 
 mqttClient.on('connect', () => {
   console.log('MQTT Connected');
   mqttClient.subscribe('#');
 });
 
-mqttClient.on('error', (error) => {
-  console.error(`MQTT Error: ${error.message}`);
-});
-
 mqttClient.on('message', (topic, message) => {
-  const logEntry = `${topic} ${message.toString()}`;
-  if (systemLogs.length >= 10) {
-    systemLogs.pop();
-  }
-  systemLogs.unshift(logEntry);
-
+  const msgStr = `${topic} ${message.toString()}`;
+  console.log('MQTT Message:', msgStr);
   wsServer.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify({
-        type: 'log',
-        data: logEntry
-      }));
+      client.send(msgStr);
     }
   });
 });
 
-app.get("/api/logs", (_req, res) => {
-  res.json(systemLogs);
-});
-
 app.get("/api/status", (_req, res) => {
-  res.json({ status: "ok", message: "Traffic Light Server Running" });
+  res.json({ status: "ok", message: "Server Running" });
 });
 
-// Error handling middleware
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  const status = err.status || err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
-  res.status(status).json({ message });
-});
 
 (async () => {
-  const server = app;
-
   if (app.get("env") === "development") {
-    await setupVite(app, server);
+    await setupVite(app);
   } else {
     serveStatic(app);
   }
 
   const port = 5000;
-  const serverInstance = server.listen({
+  const serverInstance = app.listen({
     port,
     host: "0.0.0.0",
   }, () => {
     console.log(`Server running on port ${port}`);
   });
 
-  // WebSocket setup with specific path
   serverInstance.on('upgrade', (request, socket, head) => {
-    if (request.url === '/ws') {
-      wsServer.handleUpgrade(request, socket, head, socket => {
-        wsServer.emit('connection', socket, request);
-        console.log('WebSocket client connected');
+    wsServer.handleUpgrade(request, socket, head, socket => {
+      wsServer.emit('connection', socket, request);
+      console.log('New WebSocket client connected');
 
-        socket.on('error', (error) => {
-          console.error(`WebSocket error: ${error.message}`);
-        });
-
-        socket.on('close', () => {
-          console.log('WebSocket client disconnected');
-        });
+      socket.on('close', () => {
+        console.log('WebSocket client disconnected');
       });
-    }
+    });
   });
 })();
