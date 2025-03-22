@@ -16,8 +16,8 @@ interface TrafficLightData {
 }
 
 function MQTTPanel() {
-  const { isConnected, devices, error, rawMessages } = useMQTT();
-  const [logs, setLogs] = useState<string[]>([]);
+  const { isConnected, error } = useMQTT();
+  const [messages, setMessages] = useState<string[]>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll cuando hay nuevos mensajes
@@ -25,27 +25,19 @@ function MQTTPanel() {
     if (logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [logs]);
+  }, [messages]);
 
-  // Actualizar logs cuando llegan mensajes MQTT
   useEffect(() => {
-    const handleMQTTMessage = (message: any) => {
-      setLogs(prev => [...prev.slice(-100), `${message.topic} ${message.message}`]);
+    const handleMQTTMessage = (event: CustomEvent) => {
+      const { topic, message } = event.detail;
+      setMessages(prev => [...prev.slice(-100), `${topic} ${message}`]);
     };
 
-    window.addEventListener('mqtt-message', (e: any) => handleMQTTMessage(e.detail));
+    window.addEventListener('mqtt-message', handleMQTTMessage as EventListener);
     return () => {
-      window.removeEventListener('mqtt-message', (e: any) => handleMQTTMessage(e.detail));
+      window.removeEventListener('mqtt-message', handleMQTTMessage as EventListener);
     };
   }, []);
-
-  if (error) {
-    return (
-      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-        <p className="text-sm text-red-600">{error}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-white p-4 rounded-lg shadow">
@@ -58,28 +50,16 @@ function MQTTPanel() {
         </span>
       </div>
 
-      {/* Panel de Logs MQTT */}
-      <div className="mb-4 p-2 bg-gray-50 rounded-lg h-60 overflow-auto font-mono text-xs">
-        {logs.map((log, i) => (
-          <div key={i} className="whitespace-pre">{log}</div>
-        ))}
-        <div ref={logsEndRef} />
-      </div>
-
-      {/* Panel de Dispositivos */}
-      {devices.size > 0 && (
-        <div className="space-y-4 mt-4">
-          <h3 className="text-sm font-semibold">Dispositivos Conectados</h3>
-          {Array.from(devices.entries()).map(([deviceId, device]) => (
-            <div key={deviceId} className="border rounded-lg p-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">Vehículos detectados:</span>
-                <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
-                  {device.data.cars_detected}
-                </span>
-              </div>
-            </div>
+      {error ? (
+        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
+      ) : (
+        <div className="font-mono text-xs bg-gray-50 p-2 rounded-lg h-60 overflow-auto">
+          {messages.map((msg, i) => (
+            <div key={i} className="whitespace-pre">{msg}</div>
           ))}
+          <div ref={logsEndRef} />
         </div>
       )}
     </div>
