@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { WebSocketServer } from "ws";
+import { WebSocket, WebSocketServer } from "ws";
 import { readFileSync, watchFile } from "fs";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -31,7 +31,7 @@ function getLatestMosquittoLogs(): string[] {
 // Función para transmitir logs a todos los clientes WebSocket
 function broadcastLogs(logs: string[]) {
   wsServer.clients.forEach(client => {
-    if (client.readyState === WebSocketServer.OPEN) {
+    if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify({
         type: 'log',
         data: logs.join('\n')
@@ -42,9 +42,11 @@ function broadcastLogs(logs: string[]) {
 
 // Observar cambios en el archivo de logs
 watchFile('mosquitto.log', { interval: 1000 }, () => {
+  log('[Debug] Detectado cambio en mosquitto.log');
   const latestLogs = getLatestMosquittoLogs();
   if (latestLogs.length > 0) {
     systemLogs = latestLogs;
+    log(`[Debug] Enviando ${latestLogs.length} logs a los clientes`);
     broadcastLogs(latestLogs);
   }
 });
