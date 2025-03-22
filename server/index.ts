@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import WebSocket from "ws";
-import { spawn, exec } from "child_process";
+import { readFileSync } from "fs";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -14,56 +14,23 @@ const wsServer = new WebSocket.Server({ noServer: true });
 // Almacenar los últimos logs
 let systemLogs: string[] = [];
 
-// Matar cualquier proceso existente de mosquitto antes de iniciar uno nuevo
-exec('pkill mosquitto', (error) => {
-  if (error) {
-    log('[Mosquitto] No se encontraron procesos previos de Mosquitto');
-  } else {
-    log('[Mosquitto] Procesos previos de Mosquitto terminados');
+// Función para leer los últimos logs de Mosquitto
+function getLatestMosquittoLogs(): string[] {
+  try {
+    const logContent = readFileSync('mosquitto.log', 'utf-8');
+    return logContent.split('\n')
+      .filter(line => line.trim())
+      .slice(-10)
+      .reverse();
+  } catch (error) {
+    log(`[Error] No se pudo leer mosquitto.log: ${error}`);
+    return [];
   }
-
-  // Iniciar Mosquitto con verbose logging
-  const mosquitto = spawn('mosquitto', ['-c', 'mosquitto.conf', '-v'], {
-    detached: true,
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-
-  mosquitto.stdout.on('data', (data) => {
-    const logEntry = data.toString().trim();
-    log(`[Mosquitto] ${logEntry}`);
-
-    // Mantener solo los últimos 10 logs
-    if (systemLogs.length >= 10) {
-      systemLogs.pop();
-    }
-    systemLogs.unshift(logEntry);
-
-    // Transmitir el log a todos los clientes WebSocket
-    wsServer.clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({
-          type: 'log',
-          data: logEntry
-        }));
-      }
-    });
-  });
-
-  mosquitto.stderr.on('data', (data) => {
-    const logEntry = data.toString().trim();
-    log(`[Mosquitto Error] ${logEntry}`);
-  });
-
-  mosquitto.on('close', (code) => {
-    log(`[Mosquitto] El proceso terminó con código ${code}`);
-  });
-
-  // Desacoplar el proceso hijo para que no bloquee el servidor
-  mosquitto.unref();
-});
+}
 
 // API endpoint para obtener logs
 app.get("/api/logs", (_req, res) => {
+  systemLogs = getLatestMosquittoLogs();
   res.json(systemLogs);
 });
 
@@ -109,10 +76,19 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
     log(`[Server] Servidor ejecutándose en el puerto ${port}`);
   });
 
+  // Configurar WebSocket
   serverInstance.on('upgrade', (request, socket, head) => {
     wsServer.handleUpgrade(request, socket, head, socket => {
       wsServer.emit('connection', socket, request);
       log(`[WebSocket] Nueva conexión WebSocket establecida`);
+
+      // Enviar logs actuales al cliente
+      const currentLogs = getLatestMosquittoLogs();
+      socket.send(JSON.stringify({
+        type: 'log',
+        data: currentLogs.join('\n')
+      }));
+
       socket.on('error', (error) => {
         log(`[WebSocket] Error en la conexión: ${error.message}`);
       });
@@ -121,4 +97,17 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
       });
     });
   });
+
+  // Actualizar logs cada 2 segundos
+  setInterval(() => {
+    const latestLogs = getLatestMosquittoLogs();
+    wsServer.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'log',
+          data: latestLogs.join('\n')
+        }));
+      }
+    });
+  }, 2000);
 })();
