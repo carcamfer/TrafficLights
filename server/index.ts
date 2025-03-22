@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import WebSocket from "ws";
-import { readFileSync } from "fs";
+import { readFileSync, watchFile } from "fs";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -28,10 +28,31 @@ function getLatestMosquittoLogs(): string[] {
   }
 }
 
+// Función para transmitir logs a todos los clientes WebSocket
+function broadcastLogs(logs: string[]) {
+  wsServer.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({
+        type: 'log',
+        data: logs.join('\n')
+      }));
+    }
+  });
+}
+
+// Observar cambios en el archivo de logs
+watchFile('mosquitto.log', { interval: 1000 }, () => {
+  const latestLogs = getLatestMosquittoLogs();
+  if (latestLogs.length > 0) {
+    systemLogs = latestLogs;
+    broadcastLogs(latestLogs);
+  }
+});
+
 // API endpoint para obtener logs
 app.get("/api/logs", (_req, res) => {
-  systemLogs = getLatestMosquittoLogs();
-  res.json(systemLogs);
+  const logs = getLatestMosquittoLogs();
+  res.json(logs);
 });
 
 // Basic API endpoint for testing
@@ -92,22 +113,10 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
       socket.on('error', (error) => {
         log(`[WebSocket] Error en la conexión: ${error.message}`);
       });
+
       socket.on('close', () => {
         log('[WebSocket] Conexión cerrada');
       });
     });
   });
-
-  // Actualizar logs cada 2 segundos
-  setInterval(() => {
-    const latestLogs = getLatestMosquittoLogs();
-    wsServer.clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({
-          type: 'log',
-          data: latestLogs.join('\n')
-        }));
-      }
-    });
-  }, 2000);
 })();
