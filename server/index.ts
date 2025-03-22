@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
 // Configuración MQTT con opciones específicas
-const mqttClient = mqtt.connect('mqtt://localhost:3000', {
+const mqttClient = mqtt.connect('mqtt://localhost:1883', {
   clientId: 'traffic_control_server_' + Math.random().toString(16).substr(2, 8),
   clean: true,
   connectTimeout: 4000,
@@ -19,8 +19,6 @@ const mqttClient = mqtt.connect('mqtt://localhost:3000', {
   resubscribe: true,
   protocolId: 'MQTT',
   protocolVersion: 4,
-  reconnectPeriod: 1000,
-  connectTimeout: 30 * 1000,
   rejectUnauthorized: false
 });
 
@@ -31,15 +29,15 @@ let systemLogs: string[] = [];
 
 mqttClient.on('connect', () => {
   const logEntry = 'Conectado al broker MQTT';
-  log(logEntry);
+  log(`[MQTT] ${logEntry}`);
+  mqttClient.subscribe('#'); // Suscribirse a todos los tópicos incluyendo $SYS
   systemLogs.unshift(logEntry);
   broadcastLog(logEntry);
-  mqttClient.subscribe('#'); // Suscribirse a todos los tópicos
 });
 
 mqttClient.on('error', (error) => {
   const logEntry = `Error MQTT: ${error.message}`;
-  log(logEntry);
+  log(`[MQTT] ${logEntry}`);
   systemLogs.unshift(logEntry);
   broadcastLog(logEntry);
 });
@@ -71,8 +69,8 @@ function broadcastLog(logEntry: string) {
 }
 
 mqttClient.on('message', (topic, message) => {
-  const logEntry = `${topic}: ${message.toString()}`;
-  log(`[MQTT] Mensaje recibido - ${logEntry}`);
+  const logEntry = `Mensaje MQTT - ${topic}: ${message.toString()}`;
+  log(`[MQTT] ${logEntry}`);
   systemLogs.unshift(logEntry);
   broadcastLog(logEntry);
 });
@@ -97,17 +95,17 @@ app.post("/api/mqtt/publish", (req, res) => {
     mqttClient.publish(topic, message, (err) => {
       if (err) {
         const errorMsg = `Error al publicar mensaje MQTT: ${err.message}`;
-        log(errorMsg);
+        log(`[MQTT] ${errorMsg}`);
         res.status(500).json({ status: "error", message: errorMsg });
       } else {
         const successMsg = `Mensaje publicado exitosamente en ${topic}`;
-        log(successMsg);
+        log(`[MQTT] ${successMsg}`);
         res.json({ status: "ok", message: successMsg });
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     const errorMsg = `Error al procesar la solicitud: ${error.message}`;
-    log(errorMsg);
+    log(`[MQTT] ${errorMsg}`);
     res.status(500).json({ status: "error", message: errorMsg });
   }
 });
@@ -119,7 +117,7 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (req.path.startsWith("/api")) {
       const logEntry = `${req.method} ${req.path} ${res.statusCode} in ${duration}ms`;
-      log(logEntry);
+      log(`[API] ${logEntry}`);
       systemLogs.unshift(logEntry);
       broadcastLog(logEntry);
     }
@@ -132,7 +130,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Error interno del servidor";
   const logEntry = `Error: ${message}`;
-  log(logEntry);
+  log(`[Error] ${logEntry}`);
   systemLogs.unshift(logEntry);
   broadcastLog(logEntry);
   res.status(status).json({ message });
@@ -141,26 +139,23 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 (async () => {
   const server = app;
 
-  // Configuración de Vite después de las rutas API
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve on port 5000
   const port = 5000;
   const serverInstance = server.listen({
     port,
     host: "0.0.0.0",
   }, () => {
     const logEntry = `Servidor ejecutándose en el puerto ${port}`;
-    log(logEntry);
+    log(`[Server] ${logEntry}`);
     systemLogs.unshift(logEntry);
     broadcastLog(logEntry);
   });
 
-  // Configurar WebSocket Server
   serverInstance.on('upgrade', (request, socket, head) => {
     wsServer.handleUpgrade(request, socket, head, socket => {
       wsServer.emit('connection', socket, request);
