@@ -79,7 +79,7 @@ function App() {
           const data = JSON.parse(event.data);
           if (data.type === 'log') {
             const logLines = data.data.split('\n').filter(line => line.trim());
-            setSystemLogs(prev => [...logLines, ...prev].slice(0, 50));
+            setSystemLogs(prev => [...logLines].slice(0, 10));
           }
         } catch (error) {
           console.error('Error al procesar mensaje:', error);

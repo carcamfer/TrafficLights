@@ -14,7 +14,7 @@ const wsServer = new WebSocketServer({ noServer: true });
 
 // Almacenar los últimos logs
 let systemLogs: string[] = [];
-const MAX_LOGS = 100;
+const MAX_LOGS = 10;
 
 // Cliente MQTT para monitorear
 const mqttClient = mqtt.connect('mqtt://0.0.0.0:1883');
