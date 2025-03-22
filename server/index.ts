@@ -82,14 +82,16 @@ mqttClient.on('message', (topic, message) => {
 
     const parts = topic.split('/');
     const deviceId = parts[2];
-    const messageType = parts[parts.length - 1];
+    const messageType = parts[4]; // cars o time
+    const subType = parts[5];    // detect o light type
     const value = parseInt(message.toString());
 
     log('Procesando mensaje:', {
+      topic,
       deviceId,
       messageType,
-      value,
-      topicParts: parts
+      subType,
+      value
     });
 
     // Actualizar estado del dispositivo
@@ -97,13 +99,14 @@ mqttClient.on('message', (topic, message) => {
       deviceId,
       timestamp: new Date().toISOString(),
       data: {},
-      status: 'active'
+      status: 'connected'
     };
 
-    if (messageType === 'detect') {
+    if (messageType === 'cars' && subType === 'detect') {
       device.data.cars_detected = value;
-    } else if (['red', 'yellow', 'green'].includes(messageType)) {
-      device.data[`time_${messageType}`] = value;
+    } else if (messageType === 'time' && subType === 'light') {
+      const lightType = parts[6]; // red, yellow, green
+      device.data[`time_${lightType}`] = value;
     }
 
     device.timestamp = new Date().toISOString();
