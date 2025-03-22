@@ -52,10 +52,8 @@ function App() {
   const [wsConnected, setWsConnected] = useState(false);
 
   useEffect(() => {
-    // Usar el protocolo correspondiente basado en la conexión actual
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}`);
-
+    const ws = new WebSocket('ws://0.0.0.0:3000');
+    
     const connectWebSocket = () => {
       ws.onopen = () => {
         console.log('WebSocket conectado');

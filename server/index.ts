@@ -111,7 +111,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
     serveStatic(app);
   }
 
-  const port = 5000;
+  const port = 3000;
   const serverInstance = server.listen({
     port,
     host: "0.0.0.0",
