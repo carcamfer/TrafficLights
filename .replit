@@ -10,15 +10,11 @@ deploymentTarget = "cloudrun"
 run = ["sh", "-c", "npm run dev"]
 
 [[ports]]
-localPort = 1883
-externalPort = 3000
-
-[[ports]]
 localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Dev Server"
+runButton = "Start application"
 
 [[workflows.workflow]]
 name = "Project"
@@ -43,16 +39,3 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "cd client && npm run dev"
 waitForPort = 5000
-
-[[workflows.workflow]]
-name = "Dev Server"
-author = 40347339
-mode = "parallel"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd client && npm run dev"
