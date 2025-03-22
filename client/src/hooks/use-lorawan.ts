@@ -19,7 +19,9 @@ export function useLoRaWAN() {
 
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}`;
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    console.log('Conectando a WebSocket LoRaWAN:', wsUrl);
+
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
@@ -31,7 +33,8 @@ export function useLoRaWAN() {
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data) as WSMessage;
-        
+        console.log('Mensaje LoRaWAN recibido:', message);
+
         if (message.type === 'deviceUpdate') {
           const deviceData = message.data as LoRaWANDevice;
           setDevices(prevDevices => {
@@ -59,6 +62,14 @@ export function useLoRaWAN() {
     ws.onclose = () => {
       console.log('Conexión WebSocket LoRaWAN cerrada');
       setIsConnected(false);
+      setError('Conexión perdida, reconectando...');
+
+      // Intentar reconectar después de 2 segundos
+      setTimeout(() => {
+        console.log('Intentando reconectar WebSocket LoRaWAN...');
+        const newWs = new WebSocket(wsUrl);
+        // El nuevo WebSocket se manejará en el siguiente ciclo del useEffect
+      }, 2000);
     };
 
     return () => {
