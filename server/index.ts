@@ -16,23 +16,28 @@ const wsServer = new WebSocketServer({ noServer: true });
 let systemLogs: string[] = [];
 const MAX_LOGS = 10;
 
-// Cliente MQTT para monitorear
-const mqttClient = mqtt.connect('mqtt://0.0.0.0:1883');
-
-mqttClient.on('connect', () => {
-  log('[MQTT] Conectado al broker');
-  mqttClient.subscribe('smartSemaphore/#');
-});
-
-mqttClient.on('message', (topic, message) => {
-  const logMessage = `[MQTT] ${topic}: ${message.toString()}`;
-  log(logMessage);
-  systemLogs.unshift(logMessage);
-  if (systemLogs.length > MAX_LOGS) {
-    systemLogs.pop();
+// Función para leer los últimos logs de Mosquitto
+function getLatestMosquittoLogs(): string[] {
+  try {
+    const logContent = readFileSync('mosquitto.log', 'utf-8');
+    return logContent.split('\n')
+      .filter(line => line.trim())
+      .slice(-MAX_LOGS)
+      .reverse();
+  } catch (error) {
+    log(`[Error] No se pudo leer mosquitto.log: ${error}`);
+    return [];
   }
-  broadcastLogs(systemLogs);
-});
+}
+
+// Actualizar y enviar logs cada segundo
+setInterval(() => {
+  const logs = getLatestMosquittoLogs();
+  if (logs.length > 0) {
+    systemLogs = logs;
+    broadcastLogs(logs);
+  }
+}, 1000);
 
 // Función para leer los últimos logs de Mosquitto
 function getLatestMosquittoLogs(): string[] {
