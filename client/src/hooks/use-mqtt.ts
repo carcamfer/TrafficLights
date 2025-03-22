@@ -28,20 +28,25 @@ export function useMQTT() {
     function connect() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/ws`;
+      console.log('Conectando a WebSocket:', wsUrl);
+
       ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
+        console.log('WebSocket conectado');
         setIsConnected(true);
         setError(null);
       };
 
       ws.onclose = () => {
+        console.log('WebSocket desconectado, reconectando...');
         setIsConnected(false);
         setError('Conexión perdida, reconectando...');
         setTimeout(connect, 2000);
       };
 
-      ws.onerror = () => {
+      ws.onerror = (error) => {
+        console.error('Error en WebSocket:', error);
         setError('Error de conexión');
         setIsConnected(false);
       };
@@ -49,28 +54,27 @@ export function useMQTT() {
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data) as MQTTMessage;
+          console.log('Mensaje recibido:', message);
 
           if (message.type === 'mqtt_message') {
-            // Emitir mensaje MQTT crudo para el panel de logs
+            const mqttData = message.data as { topic: string; message: string };
             window.dispatchEvent(new CustomEvent('mqtt-message', { 
-              detail: message.data
+              detail: mqttData
             }));
           } else if (message.type === 'deviceUpdate') {
-            // Actualizar estado del dispositivo
             const device = message.data as MQTTDevice;
             setDevices(prev => {
               const updated = new Map(prev);
-              updated.set(device.deviceId, {
-                ...device,
-                timestamp: new Date().toISOString()
-              });
+              updated.set(device.deviceId, device);
               return updated;
             });
           } else if (message.type === 'deviceStates') {
             const deviceArray = Array.isArray(message.data) ? message.data : [message.data];
             const newDevices = new Map();
             deviceArray.forEach(device => {
-              newDevices.set(device.deviceId, device);
+              if ('deviceId' in device) {
+                newDevices.set(device.deviceId, device);
+              }
             });
             setDevices(newDevices);
           }

@@ -48,9 +48,12 @@ wss.on('connection', (ws) => {
   });
 });
 
+// Estado de los dispositivos
+const deviceStates = new Map();
+
 // Servidor MQTT
 log('===== Iniciando conexión MQTT =====');
-const mqttClient = mqtt.connect('mqtt://localhost:1883', {
+const mqttClient = mqtt.connect('mqtt://0.0.0.0:1883', {
   clientId: 'traffic_server_' + Math.random().toString(16).substr(2, 8),
   clean: true,
   reconnectPeriod: 1000,
@@ -81,6 +84,39 @@ mqttClient.on('message', (topic, message) => {
         message: message.toString()
       }
     });
+
+    // Procesar el mensaje para actualizar el estado de los dispositivos
+    const parts = topic.split('/');
+    if (parts.length >= 4) {
+      const deviceId = parts[2];
+      const messageType = parts[4];
+      const value = parseInt(message.toString());
+
+      // Inicializar o actualizar estado del dispositivo
+      let device = deviceStates.get(deviceId) || {
+        deviceId,
+        timestamp: new Date().toISOString(),
+        data: {},
+        status: 'active'
+      };
+
+      // Actualizar datos según el tipo de mensaje
+      if (messageType === 'time') {
+        const lightType = parts[6]; // red, yellow, green
+        device.data[`time_${lightType}`] = value;
+      } else if (messageType === 'cars' && parts[5] === 'detect') {
+        device.data.cars_detected = value;
+      }
+
+      device.timestamp = new Date().toISOString();
+      deviceStates.set(deviceId, device);
+
+      // Enviar actualización del dispositivo
+      broadcast({
+        type: 'deviceUpdate',
+        data: device
+      });
+    }
   } catch (error) {
     console.error('Error procesando mensaje:', error);
   }
@@ -88,7 +124,6 @@ mqttClient.on('message', (topic, message) => {
 
 mqttClient.on('error', (error) => {
   console.error('Error en conexión MQTT:', error);
-  log('Error MQTT:', error instanceof Error ? error.message : String(error));
 });
 
 if (app.get("env") === "development") {

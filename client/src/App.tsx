@@ -16,11 +16,9 @@ interface TrafficLightData {
 }
 
 function MQTTPanel() {
-  const { isConnected, error } = useMQTT();
   const [messages, setMessages] = useState<string[]>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll cuando hay nuevos mensajes
   useEffect(() => {
     if (logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -40,59 +38,36 @@ function MQTTPanel() {
   }, []);
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Estado del Sistema</h2>
-        <span className={`px-2 py-1 rounded text-sm ${
-          isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        }`}>
-          {isConnected ? 'Conectado' : 'Desconectado'}
-        </span>
+    <div className="bg-white p-4 rounded-lg shadow mb-4">
+      <h2 className="text-lg font-semibold mb-4">Estado del Sistema</h2>
+      <div className="font-mono text-xs bg-gray-50 p-2 rounded-lg h-60 overflow-auto">
+        {messages.map((msg, i) => (
+          <div key={i} className="whitespace-pre">{msg}</div>
+        ))}
+        <div ref={logsEndRef} />
       </div>
-
-      {error ? (
-        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-          <p className="text-sm text-red-600">{error}</p>
-        </div>
-      ) : (
-        <div className="font-mono text-xs bg-gray-50 p-2 rounded-lg h-60 overflow-auto">
-          {messages.map((msg, i) => (
-            <div key={i} className="whitespace-pre">{msg}</div>
-          ))}
-          <div ref={logsEndRef} />
-        </div>
-      )}
     </div>
   );
 }
 
 function App() {
-  const { devices, isConnected } = useMQTT();
+  const { devices, isConnected, error } = useMQTT();
   const [trafficLights, setTrafficLights] = useState<TrafficLightData[]>([]);
 
   useEffect(() => {
-    console.log('Actualizando estado de semáforos:', devices);
-    const updatedLights = Array.from(devices.values()).map(device => {
-      // Determinar el estado del semáforo basado en los tiempos
-      let state: 'red' | 'yellow' | 'green' = 'red';
-      if (device.data.time_green && device.data.time_green > 0) {
-        state = 'green';
-      } else if (device.data.time_yellow && device.data.time_yellow > 0) {
-        state = 'yellow';
-      }
+    const updatedLights = Array.from(devices.values()).map(device => ({
+      id: parseInt(device.deviceId),
+      position: [31.6904, -106.4245] as [number, number],
+      state: device.data.time_green && device.data.time_green > 0 ? 'green' :
+             device.data.time_yellow && device.data.time_yellow > 0 ? 'yellow' : 'red',
+      iotStatus: device.status === 'active' ? 'connected' : 
+                device.status === 'inactive' ? 'disconnected' : 'error',
+      inputGreen: device.data.time_green || 30,
+      feedbackGreen: device.data.time_green || 0,
+      inputRed: device.data.time_red || 45,
+      feedbackRed: device.data.time_red || 0
+    }));
 
-      return {
-        id: parseInt(device.deviceId),
-        position: [31.6904, -106.4245], // Posición base
-        state,
-        iotStatus: device.status,
-        inputGreen: device.data.time_green || 30,
-        feedbackGreen: device.data.time_green || 0,
-        inputRed: device.data.time_red || 45,
-        feedbackRed: device.data.time_red || 0
-      };
-    });
-    console.log('Semáforos actualizados:', updatedLights);
     setTrafficLights(updatedLights);
   }, [devices]);
 
@@ -119,6 +94,7 @@ function App() {
           <h1 className="text-2xl font-bold text-gray-900">Sistema de Semáforos</h1>
         </div>
       </header>
+
       <main className="max-w-7xl mx-auto py-6 px-4">
         <div className="flex gap-6">
           <div className="flex-1">
@@ -129,6 +105,7 @@ function App() {
               />
             </ErrorBoundary>
           </div>
+
           <div className="w-96">
             <ErrorBoundary>
               <div className="bg-white p-4 rounded-lg shadow mb-4">
@@ -140,6 +117,11 @@ function App() {
                     {isConnected ? 'Conectado' : 'Desconectado'}
                   </span>
                 </div>
+                {error && (
+                  <div className="mb-4 p-2 bg-red-50 text-red-600 rounded text-sm">
+                    {error}
+                  </div>
+                )}
                 {trafficLights.map(light => (
                   <TrafficLightControl
                     key={light.id}
