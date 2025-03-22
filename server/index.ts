@@ -51,28 +51,26 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Servidor MQTT
-const brokerConfig = {
-  host: 'localhost',  // Cambiado a localhost para coincidir con el simulador
-  port: 1883,
+// Configuración MQTT - usando la misma configuración que el simulador Python
+log('===== Iniciando conexión MQTT =====');
+const mqttClient = mqtt.connect('mqtt://localhost:1883', {
   clientId: 'traffic_server_' + Math.random().toString(16).substr(2, 8),
   clean: true,
-  reconnectPeriod: 5000,
-  connectTimeout: 10000,
+  reconnectPeriod: 1000,
+  connectTimeout: 4000,
+  protocolVersion: 4,
+  keepalive: 60,
   rejectUnauthorized: false
-};
-
-log('Intentando conectar a MQTT broker:', `mqtt://${brokerConfig.host}:${brokerConfig.port}`);
-
-const mqttClient = mqtt.connect(`mqtt://${brokerConfig.host}:${brokerConfig.port}`, brokerConfig);
+});
 
 mqttClient.on('connect', () => {
   log('===== Conexión MQTT establecida =====');
   mqttClient.subscribe('smartSemaphore/#', (err) => {
     if (err) {
       console.error('Error al suscribirse:', err);
+      log('Error de suscripción:', err.message);
     } else {
-      log('Suscrito a smartSemaphore/#');
+      log('Suscrito exitosamente a smartSemaphore/#');
     }
   });
 });
@@ -85,6 +83,13 @@ mqttClient.on('message', (topic, message) => {
     const deviceId = parts[2];
     const messageType = parts[parts.length - 1];
     const value = parseInt(message.toString());
+
+    log('Procesando mensaje:', {
+      deviceId,
+      messageType,
+      value,
+      topicParts: parts
+    });
 
     // Actualizar estado del dispositivo
     const device = deviceStates.get(deviceId) || {
@@ -117,6 +122,7 @@ mqttClient.on('message', (topic, message) => {
     });
   } catch (error) {
     console.error('Error procesando mensaje:', error);
+    log('Error al procesar mensaje MQTT:', error instanceof Error ? error.message : String(error));
   }
 });
 
