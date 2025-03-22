@@ -19,14 +19,32 @@ interface MapViewProps {
   onPositionChange?: (id: number, newPosition: [number, number]) => void;
 }
 
-// Crear icono personalizado para los semáforos
+// Update the createTrafficLightIcon function
 const createTrafficLightIcon = (state: 'red' | 'yellow' | 'green') => {
+  const getColor = (lightState: 'red' | 'yellow' | 'green') => {
+    const colors = {
+      red: state === 'red' ? '#ef4444' : '#441111',
+      yellow: state === 'yellow' ? '#facc15' : '#444411',
+      green: state === 'green' ? '#22c55e' : '#114411'
+    };
+    return colors[lightState];
+  };
+
   const svg = `
     <svg width="30" height="30" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
       <rect x="30" y="10" width="40" height="80" rx="5" fill="#333" />
-      <circle cx="50" cy="30" r="12" fill="${state === 'red' ? '#ff4444' : '#441111'}" />
-      <circle cx="50" cy="50" r="12" fill="${state === 'yellow' ? '#ffff44' : '#444411'}" />
-      <circle cx="50" cy="70" r="12" fill="${state === 'green' ? '#44ff44' : '#114411'}" />
+      <circle cx="50" cy="30" r="12" fill="${getColor('red')}" filter="${state === 'red' ? 'url(#glow)' : ''}" />
+      <circle cx="50" cy="50" r="12" fill="${getColor('yellow')}" filter="${state === 'yellow' ? 'url(#glow)' : ''}" />
+      <circle cx="50" cy="70" r="12" fill="${getColor('green')}" filter="${state === 'green' ? 'url(#glow)' : ''}" />
     </svg>
   `;
 
