@@ -3,7 +3,6 @@ import cors from "cors";
 import { WebSocket, WebSocketServer } from "ws";
 import { readFileSync, watchFile } from "fs";
 import { setupVite, serveStatic, log } from "./vite";
-import * as mqtt from 'mqtt';
 
 const app = express();
 app.use(express.json());
@@ -39,20 +38,6 @@ setInterval(() => {
   }
 }, 1000);
 
-// Función para leer los últimos logs de Mosquitto
-function getLatestMosquittoLogs(): string[] {
-  try {
-    const logContent = readFileSync('mosquitto.log', 'utf-8');
-    return logContent.split('\n')
-      .filter(line => line.trim())
-      .slice(-10)
-      .reverse();
-  } catch (error) {
-    log(`[Error] No se pudo leer mosquitto.log: ${error}`);
-    return [];
-  }
-}
-
 // Función para transmitir logs a todos los clientes WebSocket
 function broadcastLogs(logs: string[]) {
   wsServer.clients.forEach(client => {
@@ -67,11 +52,9 @@ function broadcastLogs(logs: string[]) {
 
 // Observar cambios en el archivo de logs
 watchFile('mosquitto.log', { interval: 1000 }, () => {
-  log('[Debug] Detectado cambio en mosquitto.log');
   const latestLogs = getLatestMosquittoLogs();
   if (latestLogs.length > 0) {
     systemLogs = latestLogs;
-    log(`[Debug] Enviando ${latestLogs.length} logs a los clientes`);
     broadcastLogs(latestLogs);
   }
 });
@@ -85,26 +68,6 @@ app.get("/api/logs", (_req, res) => {
 // Basic API endpoint for testing
 app.get("/api/status", (_req, res) => {
   res.json({ status: "ok", message: "Servidor de semáforos funcionando" });
-});
-
-// Middleware for logging API requests
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (req.path.startsWith("/api")) {
-      log(`[API] ${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
-    }
-  });
-  next();
-});
-
-// Error handling middleware
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  const status = err.status || err.statusCode || 500;
-  const message = err.message || "Error interno del servidor";
-  log(`[Error] ${message}`);
-  res.status(status).json({ message });
 });
 
 (async () => {
@@ -132,10 +95,12 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
       // Enviar logs actuales al cliente
       const currentLogs = getLatestMosquittoLogs();
-      socket.send(JSON.stringify({
-        type: 'log',
-        data: currentLogs.join('\n')
-      }));
+      if (currentLogs.length > 0) {
+        socket.send(JSON.stringify({
+          type: 'log',
+          data: currentLogs.join('\n')
+        }));
+      }
 
       socket.on('error', (error) => {
         log(`[WebSocket] Error en la conexión: ${error.message}`);
@@ -147,3 +112,23 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
     });
   });
 })();
+
+// Middleware for logging API requests
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (req.path.startsWith("/api")) {
+      log(`[API] ${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
+    }
+  });
+  next();
+});
+
+// Error handling middleware
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Error interno del servidor";
+  log(`[Error] ${message}`);
+  res.status(status).json({ message });
+});
