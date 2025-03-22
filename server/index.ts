@@ -25,8 +25,7 @@ const wsServer = new WebSocket.Server({ noServer: true });
 let systemLogs: string[] = [];
 
 mqttClient.on('connect', () => {
-  // Subscribe to all topics to capture all Mosquitto messages
-  mqttClient.subscribe('#'); 
+  mqttClient.subscribe('#'); // Subscribe to all topics
 });
 
 mqttClient.on('error', (error) => {
@@ -54,7 +53,6 @@ function broadcastLog(logEntry: string) {
 
 mqttClient.on('message', (topic, message) => {
   const logEntry = `${topic} ${message.toString()}`; 
-  systemLogs.unshift(logEntry);
   broadcastLog(logEntry);
 });
 
