@@ -44,6 +44,7 @@ wss.on('connection', (ws) => {
     type: 'deviceStates',
     data: Array.from(deviceStates.values())
   };
+  log('Enviando estado inicial al cliente:', JSON.stringify(currentState));
   ws.send(JSON.stringify(currentState));
 
   ws.on('error', (error) => {
@@ -114,12 +115,18 @@ mqttClient.on('message', (topic, message) => {
       data: device
     });
 
+    log('Estado actual de dispositivos:', JSON.stringify(Array.from(deviceStates.entries())));
     log('Enviando actualización WebSocket:', wsMessage);
+
+    let clientCount = 0;
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(wsMessage);
+        clientCount++;
       }
     });
+    log(`Mensaje enviado a ${clientCount} clientes WebSocket`);
+
   } catch (error) {
     console.error('Error procesando mensaje:', error);
     log('Error al procesar mensaje MQTT:', error instanceof Error ? error.message : String(error));
