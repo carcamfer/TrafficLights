@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from "express";
 import cors from "cors";
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import * as mqtt from 'mqtt';
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -40,6 +40,7 @@ const broadcast = (message: any) => {
     if (client.readyState === WebSocket.OPEN) {
       try {
         client.send(JSON.stringify(message));
+        log('Mensaje enviado exitosamente a un cliente');
       } catch (error) {
         console.error('Error al enviar mensaje WebSocket:', error);
       }
@@ -51,6 +52,15 @@ const broadcast = (message: any) => {
 wss.on('connection', (ws) => {
   log('Nueva conexión WebSocket establecida');
 
+  // Enviar estado actual al cliente
+  const currentDevices = Array.from(deviceStates.values());
+  log('Enviando estado actual de dispositivos:', currentDevices);
+
+  ws.send(JSON.stringify({
+    type: 'deviceStates',
+    data: currentDevices
+  }));
+
   ws.on('error', (error) => {
     console.error('Error WebSocket:', error);
   });
@@ -58,7 +68,7 @@ wss.on('connection', (ws) => {
 
 // Servidor MQTT
 log('===== Iniciando conexión MQTT =====');
-const mqttClient = mqtt.connect('mqtt://0.0.0.0:1883', {
+const mqttClient = mqtt.connect('mqtt://127.0.0.1:1883', {
   clientId: 'traffic_server_' + Math.random().toString(16).substr(2, 8),
   clean: true,
   reconnectPeriod: 1000,
@@ -109,8 +119,10 @@ mqttClient.on('message', (topic, message) => {
       if (messageType === 'time') {
         const lightType = parts[6]; // red, yellow, green
         device.data[`time_${lightType}`] = value;
+        log(`Actualizando tiempo ${lightType} para dispositivo ${deviceId}: ${value}`);
       } else if (messageType === 'cars' && parts[5] === 'detect') {
         device.data.cars_detected = value;
+        log(`Actualizando cars_detected para dispositivo ${deviceId}: ${value}`);
       }
 
       device.timestamp = new Date().toISOString();

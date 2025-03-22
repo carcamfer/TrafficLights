@@ -26,14 +26,15 @@ function MQTTPanel() {
   }, [messages]);
 
   useEffect(() => {
-    const handleMQTTMessage = (event: CustomEvent) => {
+    const handleMQTTMessage = (event: any) => {
       const { topic, message } = event.detail;
-      setMessages(prev => [...prev.slice(-100), `${topic} ${message}`]);
+      console.log('Nuevo mensaje MQTT recibido:', topic, message);
+      setMessages(prev => [...prev.slice(-100), `${topic}: ${message}`]);
     };
 
-    window.addEventListener('mqtt-message', handleMQTTMessage as EventListener);
+    window.addEventListener('mqtt-message', handleMQTTMessage);
     return () => {
-      window.removeEventListener('mqtt-message', handleMQTTMessage as EventListener);
+      window.removeEventListener('mqtt-message', handleMQTTMessage);
     };
   }, []);
 
@@ -55,6 +56,7 @@ function App() {
   const [trafficLights, setTrafficLights] = useState<TrafficLightData[]>([]);
 
   useEffect(() => {
+    console.log('Actualizando estado de semáforos:', Array.from(devices.values()));
     const updatedLights = Array.from(devices.values()).map(device => ({
       id: parseInt(device.deviceId),
       position: [31.6904, -106.4245] as [number, number],
@@ -68,6 +70,7 @@ function App() {
       feedbackRed: device.data.time_red || 0
     }));
 
+    console.log('Semáforos actualizados:', updatedLights);
     setTrafficLights(updatedLights);
   }, [devices]);
 

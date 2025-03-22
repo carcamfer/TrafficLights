@@ -71,7 +71,7 @@ mqttc.on_connect = on_connect
 mqttc.on_message = on_message
 
 print("Connecting to MQTT broker...")
-mqttc.connect("0.0.0.0", 1883, 60)
+mqttc.connect("127.0.0.1", 1883, 60)
 mqttc.loop_start()
 
 counterEv = 0
