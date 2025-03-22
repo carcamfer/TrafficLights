@@ -20,6 +20,8 @@ function getLatestMosquittoLogs(): string[] {
     const logContent = readFileSync('mosquitto.log', 'utf-8');
     return logContent.split('\n')
       .filter(line => line.trim())
+      // Solo incluir mensajes que coincidan con el patrón deseado
+      .filter(line => line.includes('smartSemaphore/lora_Device') && line.includes('/info/cars/detect'))
       .slice(-10)
       .reverse();
   } catch (error) {
