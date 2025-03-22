@@ -8,7 +8,7 @@ type MQTTMessage = {
 export function useMQTT() {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [lastMessage, setLastMessage] = useState<MQTTMessage | null>(null);
+  const [lastMessage, setLastMessage] = useState<string | null>(null);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
 
   const connect = useCallback(() => {
@@ -16,13 +16,13 @@ export function useMQTT() {
     const wsClient = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
     wsClient.onopen = () => {
-      console.log('[WebSocket] Conexión establecida');
+      console.log('WebSocket Connected');
       setIsConnected(true);
       setReconnectAttempt(0);
     };
 
     wsClient.onclose = () => {
-      console.log('[WebSocket] Conexión cerrada');
+      console.log('WebSocket Disconnected');
       setIsConnected(false);
       const delay = Math.min(1000 * Math.pow(2, reconnectAttempt), 30000);
       setTimeout(() => {
@@ -32,18 +32,18 @@ export function useMQTT() {
     };
 
     wsClient.onerror = (error) => {
-      console.error('[WebSocket] Error:', error);
+      console.error('WebSocket Error:', error);
       setIsConnected(false);
     };
 
     wsClient.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'log') {
+        const { data, type } = JSON.parse(event.data);
+        if (type === 'log') {
           setLastMessage(data);
         }
       } catch (error) {
-        console.error('[WebSocket] Error al procesar mensaje:', error);
+        console.error('Error processing message:', error);
       }
     };
 
@@ -61,6 +61,6 @@ export function useMQTT() {
 
   return {
     isConnected,
-    lastMessage,
+    lastMessage
   };
 }
