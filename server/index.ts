@@ -17,28 +17,41 @@ const wsServer = new WebSocket.Server({ noServer: true });
 let systemLogs: string[] = [];
 
 mqttClient.on('connect', () => {
-  log('Conectado al broker MQTT');
+  const logEntry = 'Conectado al broker MQTT';
+  log(logEntry);
+  systemLogs.unshift(logEntry);
+  broadcastLog(logEntry);
   mqttClient.subscribe('#'); // Suscribirse a todos los tópicos
 });
 
-mqttClient.on('message', (topic, message) => {
-  const logEntry = `${new Date().toLocaleTimeString()} - ${topic}: ${message.toString()}`;
+mqttClient.on('error', (error) => {
+  const logEntry = `Error MQTT: ${error.message}`;
+  log(logEntry);
   systemLogs.unshift(logEntry);
-  // Mantener solo los últimos 100 logs
-  if (systemLogs.length > 100) {
-    systemLogs.pop();
-  }
+  broadcastLog(logEntry);
+});
 
-  // Enviar logs a todos los clientes WebSocket conectados
+// Función para transmitir logs a todos los clientes
+function broadcastLog(logEntry: string) {
   wsServer.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify({
         type: 'log',
-        data: logEntry
+        data: `${new Date().toLocaleTimeString()} - ${logEntry}`
       }));
     }
   });
+}
+
+mqttClient.on('message', (topic, message) => {
+  const logEntry = `${topic}: ${message.toString()}`;
+  log(logEntry);
+  systemLogs.unshift(logEntry);
+  broadcastLog(logEntry);
 });
+
+// === RUTAS API ===
+// Todas las rutas API deben ir antes de la configuración de Vite
 
 // API endpoint para obtener logs
 app.get("/api/logs", (_req, res) => {
@@ -50,29 +63,60 @@ app.get("/api/status", (_req, res) => {
   res.json({ status: "ok", message: "Servidor de semáforos funcionando" });
 });
 
+// API endpoint para publicar mensajes MQTT (para pruebas)
+app.post("/api/mqtt/publish", (req, res) => {
+  try {
+    const { topic, message } = req.body;
+    log(`Intentando publicar en ${topic}: ${message}`);
+
+    mqttClient.publish(topic, message, (err) => {
+      if (err) {
+        const errorMsg = `Error al publicar mensaje MQTT: ${err.message}`;
+        log(errorMsg);
+        res.status(500).json({ status: "error", message: errorMsg });
+      } else {
+        const successMsg = `Mensaje publicado exitosamente en ${topic}`;
+        log(successMsg);
+        res.json({ status: "ok", message: successMsg });
+      }
+    });
+  } catch (error) {
+    const errorMsg = `Error al procesar la solicitud: ${error.message}`;
+    log(errorMsg);
+    res.status(500).json({ status: "error", message: errorMsg });
+  }
+});
+
 // Middleware for logging API requests
 app.use((req, res, next) => {
   const start = Date.now();
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (req.path.startsWith("/api")) {
-      log(`${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
+      const logEntry = `${req.method} ${req.path} ${res.statusCode} in ${duration}ms`;
+      log(logEntry);
+      systemLogs.unshift(logEntry);
+      broadcastLog(logEntry);
     }
   });
   next();
 });
 
+// Error handling middleware
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Error interno del servidor";
+  const logEntry = `Error: ${message}`;
+  log(logEntry);
+  systemLogs.unshift(logEntry);
+  broadcastLog(logEntry);
+  res.status(status).json({ message });
+});
+
 (async () => {
   const server = app;
 
-  // Error handling middleware
-  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Error interno del servidor";
-    res.status(status).json({ message });
-    console.error(err);
-  });
-
+  // Configuración de Vite después de las rutas API
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
@@ -85,13 +129,20 @@ app.use((req, res, next) => {
     port,
     host: "0.0.0.0",
   }, () => {
-    log(`Servidor ejecutándose en el puerto ${port}`);
+    const logEntry = `Servidor ejecutándose en el puerto ${port}`;
+    log(logEntry);
+    systemLogs.unshift(logEntry);
+    broadcastLog(logEntry);
   });
 
   // Configurar WebSocket Server
   serverInstance.on('upgrade', (request, socket, head) => {
     wsServer.handleUpgrade(request, socket, head, socket => {
       wsServer.emit('connection', socket, request);
+      const logEntry = 'Nueva conexión WebSocket establecida';
+      log(logEntry);
+      systemLogs.unshift(logEntry);
+      broadcastLog(logEntry);
     });
   });
 })();
