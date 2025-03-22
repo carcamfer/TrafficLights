@@ -13,6 +13,25 @@ const wsServer = new WebSocketServer({ noServer: true });
 
 // Almacenar los últimos logs
 let systemLogs: string[] = [];
+const MAX_LOGS = 100;
+
+// Cliente MQTT para monitorear
+const mqttClient = mqtt.connect('mqtt://0.0.0.0:1883');
+
+mqttClient.on('connect', () => {
+  log('[MQTT] Conectado al broker');
+  mqttClient.subscribe('smartSemaphore/#');
+});
+
+mqttClient.on('message', (topic, message) => {
+  const logMessage = `[MQTT] ${topic}: ${message.toString()}`;
+  log(logMessage);
+  systemLogs.unshift(logMessage);
+  if (systemLogs.length > MAX_LOGS) {
+    systemLogs.pop();
+  }
+  broadcastLogs(systemLogs);
+});
 
 // Función para leer los últimos logs de Mosquitto
 function getLatestMosquittoLogs(): string[] {
