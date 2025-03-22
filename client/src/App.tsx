@@ -54,7 +54,8 @@ function App() {
 
   useEffect(() => {
     if (lastMessage) {
-      setSystemLogs(prev => [lastMessage.topic + ' ' + lastMessage.message, ...prev].slice(0, 10));
+      const formattedMessage = `${lastMessage.topic} ${lastMessage.message}`;
+      setSystemLogs(prev => [formattedMessage, ...prev].slice(0, 10));
     }
   }, [lastMessage]);
 
@@ -130,11 +131,11 @@ function App() {
                   }`}>
                     MQTT: {isConnected ? 'Conectado' : 'Desconectado'}
                   </div>
-                  <div className="h-[500px] overflow-y-auto space-y-2 text-xs font-mono">
+                  <div className="h-[500px] overflow-y-auto space-y-2">
                     {systemLogs.map((log, index) => (
                       <div 
                         key={index} 
-                        className="p-2 bg-gray-50 rounded border border-gray-200 font-mono whitespace-pre break-all"
+                        className="p-2 bg-gray-50 rounded border border-gray-200 font-mono text-xs whitespace-pre-wrap"
                       >
                         {log}
                       </div>
