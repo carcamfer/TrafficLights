@@ -30,7 +30,7 @@ let systemLogs: string[] = [];
 mqttClient.on('connect', () => {
   const logEntry = 'Conectado al broker MQTT';
   log(`[MQTT] ${logEntry}`);
-  mqttClient.subscribe('#'); // Suscribirse a todos los tópicos incluyendo $SYS
+  mqttClient.subscribe('smartSemaphore/#'); // Suscribirse solo a los tópicos de semáforos
   systemLogs.unshift(logEntry);
   broadcastLog(logEntry);
 });
@@ -44,11 +44,9 @@ mqttClient.on('error', (error) => {
 
 // Función para transmitir logs a todos los clientes
 function broadcastLog(logEntry: string) {
-  log(`[Broadcast] Intentando enviar log: ${logEntry}`);
   const activeClients = Array.from(wsServer.clients).filter(
     client => client.readyState === WebSocket.OPEN
   ).length;
-  log(`[Broadcast] Clientes WebSocket activos: ${activeClients}`);
 
   // Mantener solo los últimos 10 logs
   if (systemLogs.length >= 10) {
@@ -60,24 +58,25 @@ function broadcastLog(logEntry: string) {
     if (client.readyState === WebSocket.OPEN) {
       const message = JSON.stringify({
         type: 'log',
-        data: `${new Date().toLocaleTimeString()} - ${logEntry}`
+        data: logEntry // Ya no agregamos el timestamp aquí
       });
       client.send(message);
-      log(`[Broadcast] Log enviado exitosamente`);
     }
   });
 }
 
 mqttClient.on('message', (topic, message) => {
-  const logEntry = `Mensaje MQTT - ${topic}: ${message.toString()}`;
-  log(`[MQTT] ${logEntry}`);
-  systemLogs.unshift(logEntry);
-  broadcastLog(logEntry);
+  // Solo procesar mensajes que vengan de dispositivos LoRa
+  if (topic.startsWith('smartSemaphore/lora_Device/')) {
+    const logEntry = `${topic} ${message.toString()}`;
+    log(`[MQTT] ${logEntry}`);
+    systemLogs.unshift(logEntry);
+    broadcastLog(logEntry);
+  }
 });
 
 // API endpoint para obtener logs
 app.get("/api/logs", (_req, res) => {
-  log('[API] Solicitud de logs recibida');
   res.json(systemLogs);
 });
 
@@ -118,8 +117,6 @@ app.use((req, res, next) => {
     if (req.path.startsWith("/api")) {
       const logEntry = `${req.method} ${req.path} ${res.statusCode} in ${duration}ms`;
       log(`[API] ${logEntry}`);
-      systemLogs.unshift(logEntry);
-      broadcastLog(logEntry);
     }
   });
   next();
@@ -131,8 +128,6 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   const message = err.message || "Error interno del servidor";
   const logEntry = `Error: ${message}`;
   log(`[Error] ${logEntry}`);
-  systemLogs.unshift(logEntry);
-  broadcastLog(logEntry);
   res.status(status).json({ message });
 });
 
@@ -152,8 +147,6 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   }, () => {
     const logEntry = `Servidor ejecutándose en el puerto ${port}`;
     log(`[Server] ${logEntry}`);
-    systemLogs.unshift(logEntry);
-    broadcastLog(logEntry);
   });
 
   serverInstance.on('upgrade', (request, socket, head) => {
