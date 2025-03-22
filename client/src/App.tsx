@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MapView from './components/MapView';
 import TrafficLightControl from './components/TrafficLightControl';
 import { useMQTT } from './hooks/use-mqtt';
@@ -16,20 +16,26 @@ interface TrafficLightData {
 }
 
 function MQTTPanel() {
-  const { isConnected, devices, error } = useMQTT();
+  const { isConnected, devices, error, rawMessages } = useMQTT();
   const [logs, setLogs] = useState<string[]>([]);
+  const logsEndRef = useRef<HTMLDivElement>(null);
 
-  // Agregar logs al estado
+  // Auto-scroll cuando hay nuevos mensajes
   useEffect(() => {
-    const handleLog = (message: string) => {
-      setLogs(prev => [...prev.slice(-50), new Date().toLocaleTimeString() + ': ' + message]);
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logs]);
+
+  // Actualizar logs cuando llegan mensajes MQTT
+  useEffect(() => {
+    const handleMQTTMessage = (message: any) => {
+      setLogs(prev => [...prev.slice(-100), `${message.topic} ${message.message}`]);
     };
 
-    // Suscribirse a los logs
-    window.addEventListener('mqtt-log', (e: any) => handleLog(e.detail));
-
+    window.addEventListener('mqtt-message', (e: any) => handleMQTTMessage(e.detail));
     return () => {
-      window.removeEventListener('mqtt-log', (e: any) => handleLog(e.detail));
+      window.removeEventListener('mqtt-message', (e: any) => handleMQTTMessage(e.detail));
     };
   }, []);
 
@@ -52,43 +58,29 @@ function MQTTPanel() {
         </span>
       </div>
 
-      {/* Panel de Logs */}
-      <div className="mb-4 p-2 bg-gray-50 rounded-lg h-40 overflow-auto text-xs font-mono">
+      {/* Panel de Logs MQTT */}
+      <div className="mb-4 p-2 bg-gray-50 rounded-lg h-60 overflow-auto font-mono text-xs">
         {logs.map((log, i) => (
-          <div key={i} className="whitespace-pre-wrap">{log}</div>
+          <div key={i} className="whitespace-pre">{log}</div>
         ))}
+        <div ref={logsEndRef} />
       </div>
 
-      {devices.size > 0 ? (
-        <div className="space-y-4">
+      {/* Panel de Dispositivos */}
+      {devices.size > 0 && (
+        <div className="space-y-4 mt-4">
+          <h3 className="text-sm font-semibold">Dispositivos Conectados</h3>
           {Array.from(devices.entries()).map(([deviceId, device]) => (
-            <div key={deviceId} className="border rounded-lg p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">ID Dispositivo:</span>
-                <span className="text-sm font-mono bg-gray-50 px-2 py-1 rounded">
-                  {deviceId}
+            <div key={deviceId} className="border rounded-lg p-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">Vehículos detectados:</span>
+                <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
+                  {device.data.cars_detected}
                 </span>
-              </div>
-              <div className="space-y-1">
-                {device.data.cars_detected !== undefined && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">Vehículos detectados:</span>
-                    <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">
-                      {device.data.cars_detected}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="text-xs text-gray-500 mt-2">
-                Actualizado: {new Date(device.timestamp).toLocaleString()}
               </div>
             </div>
           ))}
         </div>
-      ) : (
-        <p className="text-sm text-gray-500">
-          {isConnected ? 'Esperando datos de los dispositivos...' : 'Conectando al servidor...'}
-        </p>
       )}
     </div>
   );

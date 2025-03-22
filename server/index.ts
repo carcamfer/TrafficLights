@@ -40,7 +40,6 @@ log('WebSocket Server iniciado en /ws');
 // Broadcast to all clients
 const broadcast = (message: any) => {
   const messageStr = JSON.stringify(message);
-  log('Broadcasting message:', messageStr);
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(messageStr);
@@ -90,11 +89,18 @@ mqttClient.on('connect', () => {
 
 mqttClient.on('message', (topic, message) => {
   try {
-    log(`Mensaje MQTT recibido - Tópico: ${topic}, Mensaje: ${message.toString()}`);
+    // Enviar el mensaje MQTT raw
+    broadcast({
+      type: 'mqtt_message',
+      data: {
+        topic,
+        message: message.toString()
+      }
+    });
 
+    // Procesar el mensaje para el estado de dispositivos
     const parts = topic.split('/');
     if (parts.length < 6) {
-      log('Formato de tópico inválido:', topic);
       return;
     }
 
@@ -102,8 +108,6 @@ mqttClient.on('message', (topic, message) => {
     const messageType = parts[4];
     const subType = parts[5];
     const value = parseInt(message.toString());
-
-    log('Procesando mensaje:', { deviceId, messageType, subType, value });
 
     // Inicializar o actualizar estado del dispositivo
     let device = deviceStates.get(deviceId);
@@ -123,19 +127,14 @@ mqttClient.on('message', (topic, message) => {
       device.timestamp = new Date().toISOString();
       deviceStates.set(deviceId, device);
 
-      log('Dispositivo actualizado:', device);
-      log('Estado actual de deviceStates:', Array.from(deviceStates.entries()));
-
-      // Enviar actualización a todos los clientes
+      // Enviar actualización de estado
       broadcast({
         type: 'deviceUpdate',
         data: device
       });
     }
-
   } catch (error) {
     console.error('Error procesando mensaje:', error);
-    log('Error al procesar mensaje MQTT:', error instanceof Error ? error.message : String(error));
   }
 });
 
