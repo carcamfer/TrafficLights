@@ -9,8 +9,14 @@ app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
-// Configuración MQTT
-const mqttClient = mqtt.connect('mqtt://localhost:1883');
+// Configuración MQTT con opciones específicas
+const mqttClient = mqtt.connect('mqtt://localhost:1883', {
+  clientId: 'traffic_control_server_' + Math.random().toString(16).substr(2, 8),
+  clean: true,
+  connectTimeout: 4000,
+  reconnectPeriod: 1000,
+});
+
 const wsServer = new WebSocket.Server({ noServer: true });
 
 // Almacenar los últimos logs
@@ -38,6 +44,12 @@ function broadcastLog(logEntry: string) {
     client => client.readyState === WebSocket.OPEN
   ).length;
   log(`[Broadcast] Clientes WebSocket activos: ${activeClients}`);
+
+  // Mantener solo los últimos 10 logs
+  if (systemLogs.length >= 10) {
+    systemLogs.pop(); // Eliminar el log más antiguo
+  }
+  systemLogs.unshift(logEntry);
 
   wsServer.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
