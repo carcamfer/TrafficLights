@@ -3,6 +3,7 @@ import cors from "cors";
 import { WebSocket, WebSocketServer } from "ws";
 import { readFileSync, watchFile } from "fs";
 import { setupVite, serveStatic, log } from "./vite";
+import * as mqtt from 'mqtt';
 
 const app = express();
 app.use(express.json());
