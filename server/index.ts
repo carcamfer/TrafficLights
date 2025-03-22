@@ -30,7 +30,7 @@ let systemLogs: string[] = [];
 mqttClient.on('connect', () => {
   const logEntry = 'Conectado al broker MQTT';
   log(`[MQTT] ${logEntry}`);
-  mqttClient.subscribe('smartSemaphore/#'); // Suscribirse solo a los tópicos de semáforos
+  mqttClient.subscribe('smartSemaphore/#'); // Suscribirse a los tópicos de semáforos
   systemLogs.unshift(logEntry);
   broadcastLog(logEntry);
 });
