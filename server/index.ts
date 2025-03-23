@@ -5,6 +5,8 @@ import { log } from "./vite";
 import { setupVite, serveStatic } from "./vite";
 import './mqtt-simulator';
 
+log('[Server] Iniciando servidor Express...');
+
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -34,45 +36,53 @@ app.get("/api/logs", (_req, res) => {
 });
 
 (async () => {
-  const server = app;
+  try {
+    log('[Server] Configurando servidor...');
+    const server = app;
 
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
+    if (app.get("env") === "development") {
+      log('[Server] Configurando Vite para desarrollo...');
+      await setupVite(app, server);
+    } else {
+      log('[Server] Configurando servidor para producción...');
+      serveStatic(app);
+    }
 
-  const port = 5000;
-  const serverInstance = server.listen({
-    port,
-    host: "0.0.0.0",
-  }, () => {
-    log(`[Server] Servidor ejecutándose en el puerto ${port}`);
-  });
+    const port = 5000;
+    const serverInstance = server.listen({
+      port,
+      host: "0.0.0.0",
+    }, () => {
+      log(`[Server] Servidor ejecutándose en http://0.0.0.0:${port}`);
+    });
 
-  // Configurar WebSocket
-  serverInstance.on('upgrade', (request, socket, head) => {
-    wsServer.handleUpgrade(request, socket, head, socket => {
-      wsServer.emit('connection', socket, request);
-      log(`[WebSocket] Nueva conexión WebSocket establecida`);
+    // Configurar WebSocket
+    serverInstance.on('upgrade', (request, socket, head) => {
+      wsServer.handleUpgrade(request, socket, head, socket => {
+        wsServer.emit('connection', socket, request);
+        log(`[WebSocket] Nueva conexión WebSocket establecida`);
 
-      // Enviar logs actuales al cliente
-      if (systemLogs.length > 0) {
-        socket.send(JSON.stringify({
-          type: 'log',
-          data: systemLogs
-        }));
-      }
+        // Enviar logs actuales al cliente
+        if (systemLogs.length > 0) {
+          socket.send(JSON.stringify({
+            type: 'log',
+            data: systemLogs
+          }));
+        }
 
-      socket.on('error', (error) => {
-        log(`[WebSocket] Error en la conexión: ${error.message}`);
-      });
+        socket.on('error', (error) => {
+          log(`[WebSocket] Error en la conexión: ${error.message}`);
+        });
 
-      socket.on('close', () => {
-        log('[WebSocket] Conexión cerrada');
+        socket.on('close', () => {
+          log('[WebSocket] Conexión cerrada');
+        });
       });
     });
-  });
+  } catch (error) {
+    log(`[Server] Error al iniciar el servidor: ${error}`);
+    process.exit(1);
+  }
 })();
 
 // Middleware para logging
