@@ -52,12 +52,11 @@ function App() {
   const [wsConnected, setWsConnected] = useState(false);
 
   useEffect(() => {
-    let ws: WebSocket;
+    // Usar el protocolo correspondiente basado en la conexión actual
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}`);
 
     const connectWebSocket = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${window.location.host}`);
-
       ws.onopen = () => {
         console.log('WebSocket conectado');
         setWsConnected(true);
@@ -66,8 +65,8 @@ function App() {
       ws.onclose = () => {
         console.log('WebSocket desconectado');
         setWsConnected(false);
+        // Intentar reconectar después de 5 segundos
         setTimeout(connectWebSocket, 5000);
-      };
       };
 
       ws.onerror = (error) => {
@@ -80,7 +79,7 @@ function App() {
           const data = JSON.parse(event.data);
           if (data.type === 'log') {
             const logLines = data.data.split('\n').filter(line => line.trim());
-            setSystemLogs(logLines);
+            setSystemLogs(prev => [...logLines].slice(0, 10));
           }
         } catch (error) {
           console.error('Error al procesar mensaje:', error);
