@@ -5,41 +5,35 @@ import { log } from "./vite";
 import { setupVite, serveStatic } from "./vite";
 import './mqtt-simulator';
 
+log('[Server] Iniciando servidor Express...');
+
 const app = express();
 app.use(express.json());
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+app.use(cors());
 app.use(express.urlencoded({ extended: false }));
+
+const wsServer = new WebSocketServer({ noServer: true });
 
 // Almacenar los últimos logs
 let systemLogs: string[] = [];
 const MAX_LOGS = 10;
 
-// Función para agregar logs
-export function addLog(message: string) {
-  const timestamp = new Date().toLocaleTimeString();
-  systemLogs.unshift(`[${timestamp}] ${message}`);
-  if (systemLogs.length > MAX_LOGS) {
-    systemLogs.pop();
-  }
+// Función para transmitir logs a todos los clientes WebSocket
+function broadcastLogs(logs: string[]) {
+  wsServer.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({
+        type: 'log',
+        data: logs
+      }));
+    }
+  });
 }
 
 // API endpoint para obtener logs
-app.get("/logs", (_req, res) => {
-  console.log('Enviando logs:', systemLogs);
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  res.json({ logs: systemLogs });
+app.get("/api/logs", (_req, res) => {
+  res.json(systemLogs);
 });
-
-// Agregar algunos logs de ejemplo
-setInterval(() => {
-  addLog(`Estado del semáforo actualizado`);
-}, 5000);
 
 (async () => {
   try {
@@ -62,9 +56,7 @@ setInterval(() => {
       log(`[Server] Servidor ejecutándose en http://0.0.0.0:${port}`);
     });
 
-
     // Configurar WebSocket
-    const wsServer = new WebSocketServer({ noServer: true });
     serverInstance.on('upgrade', (request, socket, head) => {
       wsServer.handleUpgrade(request, socket, head, socket => {
         wsServer.emit('connection', socket, request);
@@ -104,10 +96,7 @@ app.use((req, res, next) => {
 // Para actualizar los logs desde el cliente MQTT
 export function updateSystemLogs(message: string) {
   systemLogs = [message, ...systemLogs.slice(0, MAX_LOGS - 1)];
-  //The broadcastLogs function is not defined in the edited code, but it's needed based on the original code
-  //This is a limitation, as we cannot introduce entirely new code.
-  // Leaving this function out will cause a runtime error.  A complete solution would require more information.
-
+  broadcastLogs(systemLogs);
 }
 
 // Basic API endpoint for testing
