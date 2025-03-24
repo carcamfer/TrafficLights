@@ -7,7 +7,12 @@ import './mqtt-simulator';
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 app.use(express.urlencoded({ extended: false }));
 
 // Almacenar los últimos logs
