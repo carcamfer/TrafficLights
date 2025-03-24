@@ -50,6 +50,22 @@ function App() {
 
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
 
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:5000/logs');
+        const data = await response.json();
+        setSystemLogs(data);
+      } catch (error) {
+        console.error('Error fetching logs:', error);
+      }
+    };
+
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleTimeChange = (id: number, type: 'inputGreen' | 'inputRed', value: number) => {
     setTrafficLights(prev =>
       prev.map(light =>
