@@ -53,18 +53,28 @@ function App() {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const response = await fetch('http://0.0.0.0:5000/logs');
+        console.log('Intentando obtener logs...');
+        const response = await fetch('http://0.0.0.0:5000/logs', {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        console.log('Estado de la respuesta:', response.status);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        console.log('Logs recibidos:', data);
+        console.log('Datos recibidos:', data);
         
-        if (data && Array.isArray(data.logs)) {
+        if (data && data.logs) {
           setSystemLogs(data.logs);
+        } else {
+          console.warn('No se encontraron logs en la respuesta');
+          setSystemLogs([]);
         }
       } catch (error) {
-        console.error('Error al obtener logs:', error);
+        console.error('Error detallado al obtener logs:', error);
       }
     };
 
