@@ -54,11 +54,12 @@ function App() {
     const fetchLogs = async () => {
       try {
         const response = await fetch('http://127.0.0.1:5000/logs');
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          setSystemLogs(data);
-          console.log('Logs actualizados:', data);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+        const data = await response.json();
+        console.log('Respuesta del servidor:', data);
+        setSystemLogs(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Error fetching logs:', error);
       }

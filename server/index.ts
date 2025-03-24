@@ -25,6 +25,8 @@ export function addLog(message: string) {
 
 // API endpoint para obtener logs
 app.get("/logs", (_req, res) => {
+  console.log('Logs solicitados:', systemLogs);
+  res.header('Access-Control-Allow-Origin', '*');
   res.json(systemLogs);
 });
 
