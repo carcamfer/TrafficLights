@@ -55,7 +55,7 @@ function App() {
   const { data: logs } = useQuery({
     queryKey: ['logs'],
     queryFn: async () => {
-      const response = await fetch('http://localhost:5001/logs');
+      const response = await fetch('http://localhost:5000/logs');
       if (!response.ok) {
         throw new Error('Error al obtener logs');
       }
