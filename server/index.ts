@@ -12,34 +12,70 @@ app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
-const wsServer = new WebSocketServer({ noServer: true });
+const server = app.listen(5000, '0.0.0.0', () => {
+  log('[Server] Servidor HTTP iniciado en puerto 5000');
+});
 
-import fs from 'fs';
-import path from 'path';
+const wsServer = new WebSocketServer({ server });
 
-const LOG_FILE = 'logs.txt';
+// Almacenar los últimos logs
+let systemLogs: string[] = [];
 const MAX_LOGS = 10;
 
-// Función para escribir logs al archivo
-function writeLog(message: string) {
-  const timestamp = new Date().toISOString();
-  const logEntry = `${timestamp} ${message}\n`;
-  fs.appendFileSync(LOG_FILE, logEntry);
+// Función para transmitir logs a todos los clientes
+function broadcastLogs() {
+  const message = JSON.stringify({ type: 'log', data: systemLogs });
+  wsClients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
 }
 
-// API endpoint para obtener logs
-app.get("/api/logs", (_req, res) => {
-  try {
-    const logs = fs.readFileSync(LOG_FILE, 'utf-8')
-      .split('\n')
-      .filter(Boolean)
-      .slice(-MAX_LOGS)
-      .reverse();
-    res.json(logs);
-  } catch (error) {
-    res.json([]);
-  }
+// Actualizar logs del sistema
+export function updateSystemLogs(log: string) {
+  systemLogs = [log, ...systemLogs].slice(0, MAX_LOGS);
+  broadcastLogs();
+}
+
+wsServer.on('connection', (ws) => {
+  wsClients.add(ws);
+  ws.send(JSON.stringify({ type: 'log', data: systemLogs }));
+
+  ws.on('close', () => {
+    wsClients.delete(ws);
+  });
 });
+
+if (import.meta.env.PROD) {
+  await setupVite(app);
+} else {
+  serveStatic(app);
+}
+
+const port = 5000;
+const serverInstance = server.listen({
+  port,
+  host: "0.0.0.0",
+}, () => {
+  log(`[Server] Servidor HTTP iniciado en puerto ${port}`);
+});
+
+serverInstance.on('upgrade', (request, socket, head) => {
+  wsServer.handleUpgrade(request, socket, head, (ws) => {
+    wsServer.emit('connection', ws, request);
+  });
+});et
+function broadcastLogs(logs: string[]) {
+  wsServer.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({
+        type: 'log',
+        data: logs
+      }));
+    }
+  });
+}
 
 // API endpoint para obtener logs
 app.get("/api/logs", (_req, res) => {
