@@ -53,9 +53,12 @@ function App() {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const response = await fetch('http://0.0.0.0:5000/logs');
+        const response = await fetch('/logs');
         const data = await response.json();
-        setSystemLogs(data);
+        if (Array.isArray(data)) {
+          setSystemLogs(data);
+          console.log('Logs actualizados:', data);
+        }
       } catch (error) {
         console.error('Error fetching logs:', error);
       }
