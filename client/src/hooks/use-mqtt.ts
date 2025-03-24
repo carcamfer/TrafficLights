@@ -25,13 +25,10 @@ export function useMQTT() {
     wsClient.onclose = () => {
       console.log('[WebSocket] Conexión cerrada');
       setIsConnected(false);
-      // Intentar reconectar después de un retraso exponencial
-      const delay = Math.min(1000 * Math.pow(2, reconnectAttempt), 30000);
-      console.log(`[WebSocket] Intentando reconectar en ${delay}ms`);
       setTimeout(() => {
-        setReconnectAttempt(prev => prev + 1);
+        console.log('[WebSocket] Intentando reconectar...');
         connect();
-      }, delay);
+      }, 1000);
     };
 
     wsClient.onerror = (error) => {
@@ -44,7 +41,9 @@ export function useMQTT() {
         console.log('[WebSocket] Mensaje recibido:', event.data);
         const data = JSON.parse(event.data);
         if (data.type === 'log') {
-          setLastMessage(data);
+          const lastLine = data.data[0]; // Tomar el último mensaje recibido
+          const [topic, message] = lastLine.split(' ');
+          setLastMessage({ topic, message });
         }
       } catch (error) {
         console.error('[WebSocket] Error al procesar mensaje:', error);
@@ -57,7 +56,7 @@ export function useMQTT() {
       console.log('[WebSocket] Limpiando conexión');
       wsClient.close();
     };
-  }, [reconnectAttempt]);
+  }, []);
 
   useEffect(() => {
     const cleanup = connect();

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import MapView from './components/MapView';
 import TrafficLightControl from './components/TrafficLightControl';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMQTT } from './hooks/use-mqtt';
 
 interface TrafficLightData {
   id: number;
@@ -49,51 +50,14 @@ function App() {
   ]);
 
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
-  const [wsConnected, setWsConnected] = useState(false);
+  const { isConnected, lastMessage } = useMQTT();
 
   useEffect(() => {
-    let ws: WebSocket;
-
-    const connectWebSocket = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${window.location.host}`);
-
-      ws.onopen = () => {
-        console.log('WebSocket conectado');
-        setWsConnected(true);
-      };
-
-      ws.onclose = () => {
-        console.log('WebSocket desconectado');
-        setWsConnected(false);
-        setTimeout(connectWebSocket, 5000);
-      };
-      };
-
-      ws.onerror = (error) => {
-        console.error('Error de WebSocket:', error);
-        setWsConnected(false);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'log') {
-            const logLines = data.data.split('\n').filter(line => line.trim());
-            setSystemLogs(logLines);
-          }
-        } catch (error) {
-          console.error('Error al procesar mensaje:', error);
-        }
-      };
-    };
-
-    connectWebSocket();
-
-    return () => {
-      ws.close();
-    };
-  }, []);
+    if (lastMessage) {
+      const formattedMessage = `${lastMessage.topic} ${lastMessage.message}`;
+      setSystemLogs(prev => [formattedMessage, ...prev].slice(0, 10));
+    }
+  }, [lastMessage]);
 
   const handleTimeChange = (id: number, type: 'inputGreen' | 'inputRed', value: number) => {
     setTrafficLights(prev =>
@@ -163,15 +127,15 @@ function App() {
               <CardContent>
                 <div className="space-y-2">
                   <div className={`px-2 py-1 rounded-md text-sm ${
-                    wsConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}>
-                    WebSocket: {wsConnected ? 'Conectado' : 'Desconectado'}
+                    MQTT: {isConnected ? 'Conectado' : 'Desconectado'}
                   </div>
-                  <div className="h-[500px] overflow-y-auto space-y-2 text-xs font-mono">
+                  <div className="h-[500px] overflow-y-auto space-y-2">
                     {systemLogs.map((log, index) => (
                       <div 
                         key={index} 
-                        className="p-2 bg-gray-50 rounded border border-gray-200 break-all"
+                        className="p-2 bg-gray-50 rounded border border-gray-200 font-mono text-xs whitespace-pre-wrap"
                       >
                         {log}
                       </div>
