@@ -5,6 +5,28 @@ import { log } from "./vite";
 import { setupVite, serveStatic } from "./vite";
 import './mqtt-simulator';
 
+// Almacenar los últimos logs
+let systemLogs: string[] = [];
+
+// Endpoint para obtener logs
+app.get('/logs', (req, res) => {
+  res.json(systemLogs);
+});
+
+// Función para agregar logs
+export function addLog(message: string) {
+  const timestamp = new Date().toLocaleTimeString();
+  systemLogs.unshift(`[${timestamp}] ${message}`);
+  if (systemLogs.length > 10) {
+    systemLogs.pop();
+  }
+}
+
+// Agregar algunos logs de ejemplo
+setInterval(() => {
+  addLog(`Estado del semáforo actualizado`);
+}, 5000);
+
 log('[Server] Iniciando servidor Express...');
 
 const app = express();

@@ -53,7 +53,7 @@ function App() {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:5000/logs');
+        const response = await fetch('http://0.0.0.0:5000/logs');
         const data = await response.json();
         setSystemLogs(data);
       } catch (error) {
