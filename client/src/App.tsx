@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import MapView from './components/MapView';
 import TrafficLightControl from './components/TrafficLightControl';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from '@tanstack/react-query';
 
 interface TrafficLightData {
   id: number;
@@ -50,25 +49,6 @@ function App() {
   ]);
 
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
-
-  // Consultar los logs cada 2 segundos
-  const { data: logs } = useQuery({
-    queryKey: ['logs'],
-    queryFn: async () => {
-      const response = await fetch('http://localhost:5000/logs');
-      if (!response.ok) {
-        throw new Error('Error al obtener logs');
-      }
-      return response.json();
-    },
-    refetchInterval: 2000,
-  });
-
-  useEffect(() => {
-    if (logs) {
-      setSystemLogs(logs);
-    }
-  }, [logs]);
 
   const handleTimeChange = (id: number, type: 'inputGreen' | 'inputRed', value: number) => {
     setTrafficLights(prev =>
