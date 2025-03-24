@@ -12,7 +12,11 @@ app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
-const wsServer = new WebSocketServer({ noServer: true });
+const wsServer = new WebSocketServer({ 
+  noServer: true,
+  clientTracking: true,
+  perMessageDeflate: false
+});
 
 // Almacenar los últimos logs
 let systemLogs: string[] = [];
