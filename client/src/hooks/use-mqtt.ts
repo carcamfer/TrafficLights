@@ -25,9 +25,10 @@ export function useMQTT() {
     wsClient.onclose = () => {
       console.log('[WebSocket] Conexión cerrada');
       setIsConnected(false);
-      // Reconectar inmediatamente
-      wsClient = new WebSocket(`ws://${window.location.host}`);
-      setupWebSocket(wsClient);
+      setTimeout(() => {
+        console.log('[WebSocket] Intentando reconectar...');
+        connect();
+      }, 1000);
     };
 
     wsClient.onerror = (error) => {

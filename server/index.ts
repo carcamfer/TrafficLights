@@ -12,16 +12,15 @@ app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
-const wsServer = new WebSocketServer({ 
-  noServer: true,
-  clientTracking: true,
-  perMessageDeflate: false
+const server = app.listen(5000, '0.0.0.0', () => {
+  log('[Server] Servidor HTTP iniciado en puerto 5000');
 });
+
+const wsServer = new WebSocketServer({ server });
 
 // Almacenar los últimos logs
 let systemLogs: string[] = [];
 const MAX_LOGS = 10;
-let wsClients = new Set<WebSocket>();
 
 // Función para transmitir logs a todos los clientes
 function broadcastLogs() {
