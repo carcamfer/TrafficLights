@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import MapView from './components/MapView';
 import TrafficLightControl from './components/TrafficLightControl';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useMQTT } from './hooks/use-mqtt';
 
 interface TrafficLightData {
   id: number;
@@ -50,14 +49,6 @@ function App() {
   ]);
 
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
-  const { isConnected, lastMessage } = useMQTT();
-
-  useEffect(() => {
-    if (lastMessage) {
-      const formattedMessage = `${lastMessage.topic} ${lastMessage.message}`;
-      setSystemLogs(prev => [formattedMessage, ...prev].slice(0, 10));
-    }
-  }, [lastMessage]);
 
   const handleTimeChange = (id: number, type: 'inputGreen' | 'inputRed', value: number) => {
     setTrafficLights(prev =>
@@ -76,15 +67,14 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
+    <div className="min-h-screen bg-background">
+      <header className="border-b">
         <div className="max-w-7xl mx-auto py-4 px-4">
-          <h1 className="text-2xl font-bold text-gray-900">Sistema de Semáforos</h1>
+          <h1 className="text-2xl font-bold">Sistema de Control de Semáforos</h1>
         </div>
       </header>
       <main className="max-w-7xl mx-auto py-6 px-4">
         <div className="grid grid-cols-12 gap-6">
-          {/* Mapa */}
           <div className="col-span-7">
             <MapView 
               trafficLights={trafficLights} 
@@ -92,24 +82,17 @@ function App() {
             />
           </div>
 
-          {/* Controles */}
           <div className="col-span-3">
             <Card>
               <CardHeader>
-                <CardTitle>Control de Tiempos</CardTitle>
+                <CardTitle>Control de Semáforos</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {trafficLights.map(light => (
                     <TrafficLightControl
                       key={light.id}
-                      id={light.id}
-                      state={light.state}
-                      iotStatus={light.iotStatus}
-                      inputGreen={light.inputGreen}
-                      feedbackGreen={light.feedbackGreen}
-                      inputRed={light.inputRed}
-                      feedbackRed={light.feedbackRed}
+                      trafficLight={light}
                       onTimeChange={handleTimeChange}
                     />
                   ))}
@@ -118,7 +101,6 @@ function App() {
             </Card>
           </div>
 
-          {/* Estado del Sistema */}
           <div className="col-span-2">
             <Card>
               <CardHeader>
@@ -126,11 +108,6 @@ function App() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <div className={`px-2 py-1 rounded-md text-sm ${
-                    isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    MQTT: {isConnected ? 'Conectado' : 'Desconectado'}
-                  </div>
                   <div className="h-[500px] overflow-y-auto space-y-2">
                     {systemLogs.map((log, index) => (
                       <div 
