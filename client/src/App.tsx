@@ -2,18 +2,8 @@ import React, { useState, useEffect } from 'react';
 import MapView from './components/MapView';
 import TrafficLightControl from './components/TrafficLightControl';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useMQTT } from './hooks/use-mqtt';
+import { TrafficLightData } from '@shared/schema';
 
-interface TrafficLightData {
-  id: number;
-  position: [number, number];
-  state: 'red' | 'yellow' | 'green';
-  iotStatus: 'connected' | 'disconnected' | 'error';
-  inputGreen: number;
-  feedbackGreen: number;
-  inputRed: number;
-  feedbackRed: number;
-}
 
 function App() {
   const [trafficLights, setTrafficLights] = useState<TrafficLightData[]>([
@@ -53,9 +43,13 @@ function App() {
 
   useEffect(() => {
     const fetchLogs = async () => {
-      const response = await fetch('/api/logs');
-      const logs = await response.json();
-      setSystemLogs(logs);
+      try {
+        const response = await fetch('/api/logs');
+        const logs = await response.json();
+        setSystemLogs(logs);
+      } catch (error) {
+        console.error('Error fetching logs:', error);
+      }
     };
 
     fetchLogs();
@@ -80,77 +74,20 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto py-4 px-4">
-          <h1 className="text-2xl font-bold text-gray-900">Sistema de Semáforos</h1>
-        </div>
-      </header>
-      <main className="max-w-7xl mx-auto py-6 px-4">
-        <div className="grid grid-cols-12 gap-6">
-          {/* Mapa */}
-          <div className="col-span-7">
-            <MapView 
-              trafficLights={trafficLights} 
-              onPositionChange={handlePositionChange}
-            />
-          </div>
-
-          {/* Controles */}
-          <div className="col-span-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Control de Tiempos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {trafficLights.map(light => (
-                    <TrafficLightControl
-                      key={light.id}
-                      id={light.id}
-                      state={light.state}
-                      iotStatus={light.iotStatus}
-                      inputGreen={light.inputGreen}
-                      feedbackGreen={light.feedbackGreen}
-                      inputRed={light.inputRed}
-                      feedbackRed={light.feedbackRed}
-                      onTimeChange={handleTimeChange}
-                    />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Estado del Sistema */}
-          <div className="col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Estado del Sistema</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className={`px-2 py-1 rounded-md text-sm ${
-                    isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    MQTT: {isConnected ? 'Conectado' : 'Desconectado'}
-                  </div>
-                  <div className="h-[500px] overflow-y-auto space-y-2">
-                    {systemLogs.map((log, index) => (
-                      <div 
-                        key={index} 
-                        className="p-2 bg-gray-50 rounded border border-gray-200 font-mono text-xs whitespace-pre-wrap"
-                      >
-                        {log}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Traffic Light Control System</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white p-4 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2">System Logs</h2>
+          <div className="h-64 overflow-y-auto">
+            {systemLogs.map((log, index) => (
+              <div key={index} className="text-sm py-1 border-b">
+                {log}
+              </div>
+            ))}
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
