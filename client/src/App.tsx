@@ -53,7 +53,7 @@ function App() {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:5000/logs', {
+        const response = await fetch('http://0.0.0.0:5000/logs', {
           mode: 'cors',
           headers: {
             'Accept': 'application/json'
@@ -64,7 +64,12 @@ function App() {
         }
         const data = await response.json();
         console.log('Respuesta del servidor:', data);
-        setSystemLogs(Array.isArray(data) ? data : []);
+        
+        if (data && data.logs) {
+          setSystemLogs(data.logs);
+        } else {
+          setSystemLogs([]);
+        }
       } catch (error) {
         console.error('Error fetching logs:', error);
       }

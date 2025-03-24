@@ -32,7 +32,7 @@ export function addLog(message: string) {
 app.get("/logs", (_req, res) => {
   console.log('Logs solicitados:', systemLogs);
   res.header('Access-Control-Allow-Origin', '*');
-  res.json(systemLogs);
+  res.json({ logs: systemLogs });
 });
 
 // Agregar algunos logs de ejemplo
