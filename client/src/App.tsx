@@ -53,25 +53,18 @@ function App() {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const response = await fetch('http://0.0.0.0:5000/logs', {
-          mode: 'cors',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
+        const response = await fetch('http://0.0.0.0:5000/logs');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        console.log('Respuesta del servidor:', data);
+        console.log('Logs recibidos:', data);
         
-        if (data && data.logs) {
+        if (data && Array.isArray(data.logs)) {
           setSystemLogs(data.logs);
-        } else {
-          setSystemLogs([]);
         }
       } catch (error) {
-        console.error('Error fetching logs:', error);
+        console.error('Error al obtener logs:', error);
       }
     };
 
