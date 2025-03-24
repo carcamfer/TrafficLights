@@ -3,7 +3,7 @@ import { log } from "./vite";
 import { updateSystemLogs } from './index';
 
 // Configuración del broker MQTT
-const MQTT_HOST = process.env.MQTT_HOST || 'localhost';
+const MQTT_HOST = process.env.MQTT_HOST || '0.0.0.0';
 const MQTT_PORT = process.env.MQTT_PORT || '1883';
 
 log(`[MQTT] Iniciando conexión a mqtt://${MQTT_HOST}:${MQTT_PORT}`);
