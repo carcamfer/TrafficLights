@@ -1,154 +1,97 @@
 import express from "express";
 import cors from "cors";
 import { WebSocket, WebSocketServer } from "ws";
-import { log } from "./vite";
-import { setupVite, serveStatic } from "./vite";
-import './mqtt-simulator';
-
-log('[Server] Iniciando servidor Express...');
+import { readFileSync, watchFile } from "fs";
+import { setupVite, serveStatic, log } from "./vite";
+import * as mqtt from 'mqtt';
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
-const server = app.listen(5000, '0.0.0.0', () => {
-  log('[Server] Servidor HTTP iniciado en puerto 5000');
-});
-
-const wsServer = new WebSocketServer({ server });
+const wsServer = new WebSocketServer({ noServer: true });
 
 // Almacenar los últimos logs
 let systemLogs: string[] = [];
 const MAX_LOGS = 10;
 
-// Función para transmitir logs a todos los clientes
-function broadcastLogs() {
-  const message = JSON.stringify({ type: 'log', data: systemLogs });
-  wsClients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(message);
-    }
-  });
-}
+// Cliente MQTT para monitorear
+const mqttClient = mqtt.connect('mqtt://0.0.0.0:1883');
 
-// Actualizar logs del sistema
-export function updateSystemLogs(log: string) {
-  systemLogs = [log, ...systemLogs].slice(0, MAX_LOGS);
-  broadcastLogs();
-}
-
-wsServer.on('connection', (ws) => {
-  wsClients.add(ws);
-  ws.send(JSON.stringify({ type: 'log', data: systemLogs }));
-
-  ws.on('close', () => {
-    wsClients.delete(ws);
-  });
+mqttClient.on('connect', () => {
+  log('[MQTT] Conectado al broker');
+  mqttClient.subscribe('smartSemaphore/#');
 });
 
-if (import.meta.env.PROD) {
-  await setupVite(app);
-} else {
-  serveStatic(app);
-}
-
-const port = 5000;
-const serverInstance = server.listen({
-  port,
-  host: "0.0.0.0",
-}, () => {
-  log(`[Server] Servidor HTTP iniciado en puerto ${port}`);
+mqttClient.on('message', (topic, message) => {
+  const logMessage = `[MQTT] ${topic}: ${message.toString()}`;
+  log(logMessage);
+  systemLogs.unshift(logMessage);
+  if (systemLogs.length > MAX_LOGS) {
+    systemLogs.pop();
+  }
+  broadcastLogs(systemLogs);
 });
 
-serverInstance.on('upgrade', (request, socket, head) => {
-  wsServer.handleUpgrade(request, socket, head, (ws) => {
-    wsServer.emit('connection', ws, request);
-  });
-});et
+// Función para leer los últimos logs de Mosquitto
+function getLatestMosquittoLogs(): string[] {
+  try {
+    const logContent = readFileSync('mosquitto.log', 'utf-8');
+    return logContent.split('\n')
+      .filter(line => line.trim())
+      .slice(-10)
+      .reverse();
+  } catch (error) {
+    log(`[Error] No se pudo leer mosquitto.log: ${error}`);
+    return [];
+  }
+}
+
+// Función para transmitir logs a todos los clientes WebSocket
 function broadcastLogs(logs: string[]) {
   wsServer.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify({
         type: 'log',
-        data: logs
+        data: logs.join('\n')
       }));
     }
   });
 }
 
+// Observar cambios en el archivo de logs
+watchFile('mosquitto.log', { interval: 1000 }, () => {
+  log('[Debug] Detectado cambio en mosquitto.log');
+  const latestLogs = getLatestMosquittoLogs();
+  if (latestLogs.length > 0) {
+    systemLogs = latestLogs;
+    log(`[Debug] Enviando ${latestLogs.length} logs a los clientes`);
+    broadcastLogs(latestLogs);
+  }
+});
+
 // API endpoint para obtener logs
 app.get("/api/logs", (_req, res) => {
-  res.json(systemLogs);
+  const logs = getLatestMosquittoLogs();
+  res.json(logs);
 });
-
-(async () => {
-  try {
-    log('[Server] Configurando servidor...');
-    const server = app;
-
-    if (app.get("env") === "development") {
-      log('[Server] Configurando Vite para desarrollo...');
-      await setupVite(app, server);
-    } else {
-      log('[Server] Configurando servidor para producción...');
-      serveStatic(app);
-    }
-
-    const port = 5000;
-    const serverInstance = server.listen({
-      port,
-      host: "0.0.0.0",
-    }, () => {
-      log(`[Server] Servidor ejecutándose en http://0.0.0.0:${port}`);
-    });
-
-    // Configurar WebSocket
-    serverInstance.on('upgrade', (request, socket, head) => {
-      wsServer.handleUpgrade(request, socket, head, socket => {
-        wsServer.emit('connection', socket, request);
-        log(`[WebSocket] Nueva conexión WebSocket establecida`);
-
-        // Enviar logs actuales al cliente
-        if (systemLogs.length > 0) {
-          socket.send(JSON.stringify({
-            type: 'log',
-            data: systemLogs
-          }));
-        }
-
-        socket.on('error', (error) => {
-          log(`[WebSocket] Error en la conexión: ${error.message}`);
-        });
-
-        socket.on('close', () => {
-          log('[WebSocket] Conexión cerrada');
-        });
-      });
-    });
-  } catch (error) {
-    log(`[Server] Error al iniciar el servidor: ${error}`);
-    process.exit(1);
-  }
-})();
-
-// Middleware para logging
-app.use((req, res, next) => {
-  if (req.path.startsWith("/api")) {
-    log(`[API] ${req.method} ${req.path}`);
-  }
-  next();
-});
-
-// Para actualizar los logs desde el cliente MQTT
-export function updateSystemLogs(message: string) {
-  systemLogs = [message, ...systemLogs.slice(0, MAX_LOGS - 1)];
-  broadcastLogs(systemLogs);
-}
 
 // Basic API endpoint for testing
 app.get("/api/status", (_req, res) => {
   res.json({ status: "ok", message: "Servidor de semáforos funcionando" });
+});
+
+// Middleware for logging API requests
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (req.path.startsWith("/api")) {
+      log(`[API] ${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
+    }
+  });
+  next();
 });
 
 // Error handling middleware
@@ -158,3 +101,44 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   log(`[Error] ${message}`);
   res.status(status).json({ message });
 });
+
+(async () => {
+  const server = app;
+
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+
+  const port = 5000;
+  const serverInstance = server.listen({
+    port,
+    host: "0.0.0.0",
+  }, () => {
+    log(`[Server] Servidor ejecutándose en el puerto ${port}`);
+  });
+
+  // Configurar WebSocket
+  serverInstance.on('upgrade', (request, socket, head) => {
+    wsServer.handleUpgrade(request, socket, head, socket => {
+      wsServer.emit('connection', socket, request);
+      log(`[WebSocket] Nueva conexión WebSocket establecida`);
+
+      // Enviar logs actuales al cliente
+      const currentLogs = getLatestMosquittoLogs();
+      socket.send(JSON.stringify({
+        type: 'log',
+        data: currentLogs.join('\n')
+      }));
+
+      socket.on('error', (error) => {
+        log(`[WebSocket] Error en la conexión: ${error.message}`);
+      });
+
+      socket.on('close', () => {
+        log('[WebSocket] Conexión cerrada');
+      });
+    });
+  });
+})();

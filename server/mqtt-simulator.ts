@@ -1,49 +1,33 @@
 import * as mqtt from 'mqtt';
 import { log } from "./vite";
-import { updateSystemLogs } from './index';
 
-const MQTT_HOST = process.env.MQTT_HOST || 'localhost';
-const MQTT_PORT = process.env.MQTT_PORT || '1883';
-const MQTT_URL = `mqtt://${MQTT_HOST}:${MQTT_PORT}`;
+const client = mqtt.connect('mqtt://localhost:1883');
 
-const mqttOptions = {
-  keepalive: 60,
-  clean: true,
-  connectTimeout: 4000,
-  reconnectPeriod: 1000,
-  clientId: `mqtt_${Math.random().toString(16).slice(3)}`,
-  rejectUnauthorized: false
-};
-
-const client = mqtt.connect(MQTT_URL, mqttOptions);
+function generateRandomCarCount() {
+  return Math.floor(Math.random() * 50);
+}
 
 client.on('connect', () => {
-  log('[MQTT] Conectado al broker');
-  client.subscribe('smartSemaphore/#', (err) => {
-    if (err) {
-      log(`[MQTT] Error de suscripción: ${err.message}`);
-    } else {
-      log('[MQTT] Suscrito a smartSemaphore/#');
-    }
-  });
-});
-
-client.on('message', (topic, message) => {
-  const logMessage = `${topic} ${message.toString()}`;
-  log(`[MQTT] Mensaje recibido: ${logMessage}`);
-  updateSystemLogs(logMessage);
+  log('[MQTT] Simulador conectado al broker');
+  
+  // Generar mensajes cada 5 segundos
+  setInterval(() => {
+    const deviceId = '00000001';
+    const carCount = generateRandomCarCount();
+    const topic = `smartSemaphore/lora_Device/${deviceId}/info/cars/detect`;
+    
+    client.publish(topic, carCount.toString(), { qos: 0 }, (error) => {
+      if (error) {
+        log(`[MQTT] Error al publicar: ${error}`);
+      } else {
+        log(`[MQTT] Publicado: ${topic} ${carCount}`);
+      }
+    });
+  }, 5000);
 });
 
 client.on('error', (error) => {
-  log(`[MQTT] Error: ${error.message}`);
-});
-
-client.on('offline', () => {
-  log('[MQTT] Cliente desconectado');
-});
-
-client.on('reconnect', () => {
-  log('[MQTT] Intentando reconexión...');
+  log(`[MQTT] Error de conexión: ${error}`);
 });
 
 export default client;

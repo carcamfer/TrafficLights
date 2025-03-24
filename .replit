@@ -14,10 +14,6 @@ localPort = 1883
 externalPort = 3000
 
 [[ports]]
-localPort = 3000
-externalPort = 3001
-
-[[ports]]
 localPort = 5000
 externalPort = 80
 
@@ -55,8 +51,8 @@ mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "mosquitto -c mosquitto.conf"
+args = "npm run dev"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm run dev"
+args = "cd client && npm run dev"
