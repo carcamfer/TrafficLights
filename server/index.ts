@@ -14,21 +14,32 @@ app.use(express.urlencoded({ extended: false }));
 
 const wsServer = new WebSocketServer({ noServer: true });
 
-// Almacenar los últimos logs
-let systemLogs: string[] = [];
+import fs from 'fs';
+import path from 'path';
+
+const LOG_FILE = 'logs.txt';
 const MAX_LOGS = 10;
 
-// Función para transmitir logs a todos los clientes WebSocket
-function broadcastLogs(logs: string[]) {
-  wsServer.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify({
-        type: 'log',
-        data: logs
-      }));
-    }
-  });
+// Función para escribir logs al archivo
+function writeLog(message: string) {
+  const timestamp = new Date().toISOString();
+  const logEntry = `${timestamp} ${message}\n`;
+  fs.appendFileSync(LOG_FILE, logEntry);
 }
+
+// API endpoint para obtener logs
+app.get("/api/logs", (_req, res) => {
+  try {
+    const logs = fs.readFileSync(LOG_FILE, 'utf-8')
+      .split('\n')
+      .filter(Boolean)
+      .slice(-MAX_LOGS)
+      .reverse();
+    res.json(logs);
+  } catch (error) {
+    res.json([]);
+  }
+});
 
 // API endpoint para obtener logs
 app.get("/api/logs", (_req, res) => {

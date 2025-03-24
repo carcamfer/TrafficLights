@@ -50,14 +50,18 @@ function App() {
   ]);
 
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
-  const { isConnected, lastMessage } = useMQTT();
 
   useEffect(() => {
-    if (lastMessage) {
-      const formattedMessage = `${lastMessage.topic} ${lastMessage.message}`;
-      setSystemLogs(prev => [formattedMessage, ...prev].slice(0, 10));
-    }
-  }, [lastMessage]);
+    const fetchLogs = async () => {
+      const response = await fetch('/api/logs');
+      const logs = await response.json();
+      setSystemLogs(logs);
+    };
+
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleTimeChange = (id: number, type: 'inputGreen' | 'inputRed', value: number) => {
     setTrafficLights(prev =>
