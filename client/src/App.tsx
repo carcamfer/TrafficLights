@@ -168,7 +168,7 @@ function App() {
       <main className="max-w-7xl mx-auto py-6 px-4">
         <div className="grid grid-cols-12 gap-6">
           {/* Mapa */}
-          <div className="col-span-7">
+          <div className="col-span-6">
             <MapView 
               trafficLights={trafficLights} 
               onPositionChange={handlePositionChange}
@@ -176,7 +176,7 @@ function App() {
           </div>
 
           {/* Controles */}
-          <div className="col-span-2">
+          <div className="col-span-3">
             <Card>
               <CardHeader>
                 <CardTitle>Control de Tiempos</CardTitle>
@@ -202,7 +202,7 @@ function App() {
           </div>
 
           {/* Estado del Sistema */}
-          <div className="col-span-2">
+          <div className="col-span-3">
             <Card>
               <CardHeader>
                 <CardTitle>Estado del Sistema</CardTitle>
