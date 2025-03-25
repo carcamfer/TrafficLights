@@ -1,6 +1,7 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 import logging
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -14,6 +15,10 @@ LOG_FILE = "mqtt_logs.txt"
 @app.route('/logs', methods=['GET'])
 def get_logs():
     try:
+        # Obtener ruta absoluta del archivo
+        abs_path = os.path.abspath(LOG_FILE)
+        logger.info(f"Intentando leer logs desde: {abs_path}")
+
         with open(LOG_FILE, "r") as file:
             raw_logs = file.readlines()
             # Limpiar y formatear logs
