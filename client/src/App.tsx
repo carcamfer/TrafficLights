@@ -49,6 +49,25 @@ function App() {
   ]);
 
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
+  const [mqttData, setMqttData] = useState<any>(null);
+
+  useEffect(() => {
+    const ws = new WebSocket(`ws://${window.location.host}`);
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'log') {
+        setSystemLogs(data.data);
+        // Intentar extraer datos MQTT del log
+        const mqttMatch = data.data[0]?.match(/smartSemaphore\/1\/state (.*)/);
+        if (mqttMatch) {
+          setMqttData(JSON.parse(mqttMatch[1]));
+        }
+      }
+    };
+
+    return () => ws.close();
+  }, []);
 
   const handleTimeChange = (id: number, type: 'inputGreen' | 'inputRed', value: number) => {
     setTrafficLights(prev =>
@@ -107,6 +126,13 @@ function App() {
                 <CardTitle>Estado del Sistema</CardTitle>
               </CardHeader>
               <CardContent>
+                {mqttData && (
+                  <div className="mb-4 p-2 bg-blue-50 rounded border border-blue-200">
+                    <div className="font-bold">Último dato MQTT:</div>
+                    <div>Estado: {mqttData.state}</div>
+                    <div>Timestamp: {new Date(mqttData.timestamp).toLocaleString()}</div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <div className="h-[500px] overflow-y-auto space-y-2">
                     {systemLogs.map((log, index) => (
