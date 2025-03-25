@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import MapView from './components/MapView';
 import TrafficLightControl from './components/TrafficLightControl';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from '@tanstack/react-query'; // Assuming react-query is used
 
 interface TrafficLightData {
   id: number;
@@ -51,47 +52,26 @@ function App() {
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
   const [wsConnected, setWsConnected] = useState(false);
 
+
+  const { data: logsData, error: logsError, isFetching } = useQuery({
+    queryKey: ['logs'],
+    queryFn: async () => {
+      const response = await fetch('http://localhost:5000/logs');
+      if (!response.ok) {
+        throw new Error('Error al obtener logs');
+      }
+      const data = await response.json();
+      console.log("Logs recibidos:", data);
+      return data;
+    },
+    refetchInterval: 2000, // Actualizar cada 2 segundos
+  });
+
   useEffect(() => {
-    // Usar el protocolo correspondiente basado en la conexión actual
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}`);
-
-    const connectWebSocket = () => {
-      ws.onopen = () => {
-        console.log('WebSocket conectado');
-        setWsConnected(true);
-      };
-
-      ws.onclose = () => {
-        console.log('WebSocket desconectado');
-        setWsConnected(false);
-        // Intentar reconectar después de 5 segundos
-        setTimeout(connectWebSocket, 5000);
-      };
-
-      ws.onerror = (error) => {
-        console.error('Error de WebSocket:', error);
-        setWsConnected(false);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'log') {
-            setSystemLogs(prev => [data.data, ...prev.slice(0, 9)]); // Mantener solo los últimos 10 logs
-          }
-        } catch (error) {
-          console.error('Error al procesar mensaje:', error);
-        }
-      };
-    };
-
-    connectWebSocket();
-
-    return () => {
-      ws.close();
-    };
-  }, []);
+    if (logsData?.logs) {
+      setSystemLogs(logsData.logs);
+    }
+  }, [logsData]);
 
   const handleTimeChange = (id: number, type: 'inputGreen' | 'inputRed', value: number) => {
     setTrafficLights(prev =>
@@ -161,19 +141,29 @@ function App() {
               <CardContent>
                 <div className="space-y-2">
                   <div className={`px-2 py-1 rounded-md text-sm ${
-                    wsConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    isFetching ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
                   }`}>
-                    WebSocket: {wsConnected ? 'Conectado' : 'Desconectado'}
+                    WebSocket: {isFetching ? 'Cargando...' : 'Conectado'}
                   </div>
                   <div className="h-[500px] overflow-y-auto space-y-2 text-xs font-mono">
-                    {systemLogs.map((log, index) => (
-                      <div 
-                        key={index} 
-                        className="p-2 bg-gray-50 rounded border border-gray-200 break-all"
-                      >
-                        {log}
+                    {logsError ? (
+                      <div className="p-2 bg-red-50 text-red-800 rounded border border-red-200">
+                        Error al cargar logs: {logsError.message}
                       </div>
-                    ))}
+                    ) : systemLogs.length === 0 ? (
+                      <div className="p-2 bg-gray-50 text-gray-500 rounded border border-gray-200">
+                        No hay logs disponibles
+                      </div>
+                    ) : (
+                      systemLogs.map((log, index) => (
+                        <div 
+                          key={index} 
+                          className="p-2 bg-gray-50 rounded border border-gray-200 break-all hover:bg-gray-100"
+                        >
+                          {log}
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </CardContent>
