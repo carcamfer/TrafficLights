@@ -52,7 +52,7 @@ function App() {
   const [mqttData, setMqttData] = useState<any>(null);
 
   useEffect(() => {
-    const ws = new WebSocket(`ws://${window.location.host}`);
+    const ws = new WebSocket(`ws://${window.location.hostname}:5000`);
     
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
