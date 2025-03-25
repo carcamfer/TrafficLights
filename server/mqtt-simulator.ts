@@ -35,6 +35,17 @@ function connectMQTT() {
         log(`[MQTT] Error al suscribirse: ${err.message}`);
       } else {
         log('[MQTT] Suscrito a smartSemaphore/#');
+        
+        // Publicar datos de prueba cada 5 segundos
+        setInterval(() => {
+          const testData = {
+            id: 1,
+            state: ['red', 'yellow', 'green'][Math.floor(Math.random() * 3)],
+            timestamp: new Date().toISOString()
+          };
+          client.publish('smartSemaphore/1/state', JSON.stringify(testData));
+          log(`[MQTT] Datos de prueba enviados: ${JSON.stringify(testData)}`);
+        }, 5000);
       }
     });
   });
