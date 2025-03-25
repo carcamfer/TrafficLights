@@ -1,4 +1,5 @@
 import React from 'react';
+import mqtt from 'mqtt';
 
 interface TrafficLightControlProps {
   id: number;
@@ -21,6 +22,24 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
   feedbackRed,
   onTimeChange
 }) => {
+  // Conectar al broker MQTT
+  const client = mqtt.connect('mqtt://localhost:1883');
+
+  const handleTimeChange = (type: 'inputGreen' | 'inputRed', value: number) => {
+    const deviceId = id.toString().padStart(8, '0'); // Convertir ID a formato 00000001
+    const topic = `smartSemaphore/lora_Device/${deviceId}/set/time/light/${type === 'inputGreen' ? 'green' : 'red'}`;
+
+    // Publicar al tópico MQTT
+    client.publish(topic, value.toString(), { qos: 0, retain: false }, (error) => {
+      if (error) {
+        console.error('Error al publicar:', error);
+      }
+    });
+
+    // Actualizar UI
+    onTimeChange(id, type, value);
+  };
+
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
       <div className="flex items-center justify-between mb-3">
@@ -46,7 +65,7 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
             min="1"
             className="border rounded-md px-3 py-1.5 w-24 text-right"
             value={inputGreen}
-            onChange={(e) => onTimeChange(id, 'inputGreen', parseInt(e.target.value) || 0)}
+            onChange={(e) => handleTimeChange('inputGreen', parseInt(e.target.value) || 0)}
           />
         </div>
 
@@ -66,7 +85,7 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
             min="1"
             className="border rounded-md px-3 py-1.5 w-24 text-right"
             value={inputRed}
-            onChange={(e) => onTimeChange(id, 'inputRed', parseInt(e.target.value) || 0)}
+            onChange={(e) => handleTimeChange('inputRed', parseInt(e.target.value) || 0)}
           />
         </div>
 
