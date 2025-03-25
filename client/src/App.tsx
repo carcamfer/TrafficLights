@@ -46,12 +46,81 @@ function App() {
       feedbackGreen: 0,
       inputRed: 40,
       feedbackRed: 0
+    },
+    {
+      id: 4,
+      position: [31.6924, -106.4265],
+      state: 'red',
+      iotStatus: 'connected',
+      inputGreen: 40,
+      feedbackGreen: 38,
+      inputRed: 55,
+      feedbackRed: 53
+    },
+    {
+      id: 5,
+      position: [31.6884, -106.4225],
+      state: 'green',
+      iotStatus: 'connected',
+      inputGreen: 45,
+      feedbackGreen: 43,
+      inputRed: 60,
+      feedbackRed: 58
+    },
+    {
+      id: 6,
+      position: [31.6934, -106.4275],
+      state: 'yellow',
+      iotStatus: 'disconnected',
+      inputGreen: 20,
+      feedbackGreen: 0,
+      inputRed: 35,
+      feedbackRed: 0
+    },
+    {
+      id: 7,
+      position: [31.6874, -106.4215],
+      state: 'red',
+      iotStatus: 'connected',
+      inputGreen: 50,
+      feedbackGreen: 48,
+      inputRed: 65,
+      feedbackRed: 63
+    },
+    {
+      id: 8,
+      position: [31.6944, -106.4285],
+      state: 'green',
+      iotStatus: 'error',
+      inputGreen: 30,
+      feedbackGreen: 0,
+      inputRed: 45,
+      feedbackRed: 0
+    },
+    {
+      id: 9,
+      position: [31.6864, -106.4205],
+      state: 'yellow',
+      iotStatus: 'connected',
+      inputGreen: 35,
+      feedbackGreen: 33,
+      inputRed: 50,
+      feedbackRed: 48
+    },
+    {
+      id: 10,
+      position: [31.6954, -106.4295],
+      state: 'red',
+      iotStatus: 'connected',
+      inputGreen: 40,
+      feedbackGreen: 38,
+      inputRed: 55,
+      feedbackRed: 53
     }
   ]);
 
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
   const [wsConnected, setWsConnected] = useState(false);
-
 
   const { data: logsData, error: logsError, isFetching } = useQuery({
     queryKey: ['logs'],
