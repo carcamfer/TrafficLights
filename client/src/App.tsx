@@ -176,13 +176,13 @@ function App() {
           </div>
 
           {/* Controles */}
-          <div className="col-span-3">
+          <div className="col-span-2">
             <Card>
               <CardHeader>
                 <CardTitle>Control de Tiempos</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-4 h-[500px] overflow-y-auto pr-2">
                   {trafficLights.map(light => (
                     <TrafficLightControl
                       key={light.id}
