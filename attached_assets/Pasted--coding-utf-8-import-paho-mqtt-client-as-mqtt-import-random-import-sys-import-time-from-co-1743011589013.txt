@@ -1,0 +1,153 @@
+# -*- coding: utf-8 -*-
+import paho.mqtt.client as mqtt
+import random
+import sys
+import time
+from collections import deque
+
+class TrafficLight:
+    def __init__(self, redColorTime, greenColorTime, updatePub):
+        self.redColorTime = redColorTime
+        self.greenColorTime = greenColorTime
+        self.updatePub = updatePub
+        self.current_state = "Red"  # Estado inicial
+
+    def update(self, redColorTime=None, greenColorTime=None, updatePub=None):
+        if redColorTime is not None:
+            self.redColorTime = redColorTime
+        if greenColorTime is not None:
+            self.greenColorTime = greenColorTime
+        if updatePub is not None:
+            self.updatePub = updatePub
+
+# Verificar argumento del ID del dispositivo
+if len(sys.argv) != 2:
+    print("Usage: python3 IOT_thing.py <device_id>")
+    sys.exit(1)
+
+# Obtener el ID del dispositivo
+device_id = sys.argv[1].zfill(8)
+print(f"Hello, I am the device {device_id}")
+
+# Inicializar semáforo
+traffic_light = TrafficLight(40, 40, 1)
+
+# Definir tópicos MQTT
+base_topic = f"smartSemaphore/lora_Device/{device_id}"
+topic_car_detection = f"{base_topic}/info/cars/detect"
+topic_red = f"{base_topic}/info/time/light/red"
+topic_green = f"{base_topic}/info/time/light/green"
+topic_set_duration = f"{base_topic}/set/time/light/#"
+topic_control = f"{base_topic}/control"
+
+# Tópicos de estado para la interfaz web
+topic_iot_status = f"{base_topic}/status/iot"
+topic_feedback_green = f"{base_topic}/feedback/green"
+topic_feedback_red = f"{base_topic}/feedback/red"
+topic_current_state = f"{base_topic}/status/current"
+
+# Almacenar solo los últimos 10 logs
+log_queue = deque(maxlen=10)
+
+def save_logs():
+    """Guarda los últimos 10 logs en un archivo de texto."""
+    with open("mqtt_logs.txt", "w") as file:
+        file.writelines(log_queue)
+
+# Callback cuando se conecta al broker
+def on_connect(client, userdata, flags, reason_code, properties):
+    print(f"Connected with result code {reason_code}")
+    client.subscribe(topic_set_duration)
+    client.subscribe(topic_control)  # 🔹 Para recibir valores de Input Verde y Rojo desde la web
+
+    # Publicar estado de conexión
+    client.publish(topic_iot_status, "Connected")
+
+# Callback cuando se recibe un mensaje
+def on_message(client, userdata, msg):
+    message = f"{msg.topic} {msg.payload.decode()}"
+    print(message)
+    
+    # Guardar en la cola de logs
+    log_queue.append(message + "\n")
+    save_logs()
+
+    topic_received = msg.topic
+    payload = msg.payload.decode()
+
+    # 🔹 Recibir comandos de la web (Ejemplo: "green=30")
+    if topic_received == topic_control:
+        try:
+            key, value = payload.split("=")
+            value = int(value)
+
+            if key == "red":
+                userdata.redColorTime = value
+            elif key == "green":
+                userdata.greenColorTime = value
+
+            userdata.updatePub = 1
+            print(f"🔄 {key} actualizado a {value} segundos")
+        
+        except Exception as e:
+            print(f"❌ Error procesando mensaje: {e}")
+
+    # 🔹 Actualizar valores de Feedback
+    elif "light/red" in topic_received:
+        userdata.redColorTime = int(payload)
+        userdata.updatePub = 1
+    elif "light/green" in topic_received:
+        userdata.greenColorTime = int(payload)
+        userdata.updatePub = 1
+
+    # Determinar estado actual del semáforo
+    if userdata.redColorTime > 0:
+        userdata.current_state = "Red"
+    elif userdata.greenColorTime > 0:
+        userdata.current_state = "Green"
+
+    client.user_data_set(userdata)
+
+# Configurar cliente MQTT
+mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, userdata=traffic_light)
+mqttc.on_connect = on_connect
+mqttc.on_message = on_message
+
+mqttc.connect("localhost", 1883, 60)
+mqttc.loop_start()
+
+counterEv = 0
+
+while True:
+    dataUsr = mqttc.user_data_get()
+
+    # Publicar los tiempos de los semáforos
+    mqttc.publish(topic_red, dataUsr.redColorTime)
+    mqttc.publish(topic_green, dataUsr.greenColorTime)
+
+    # 🔹 Publicar estados para la interfaz web
+    mqttc.publish(topic_feedback_green, dataUsr.greenColorTime)
+    mqttc.publish(topic_feedback_red, dataUsr.redColorTime)
+    mqttc.publish(topic_current_state, dataUsr.current_state)
+
+    # Guardar logs también en la cola
+    log_queue.append(f"{topic_red} {dataUsr.redColorTime}\n")
+    log_queue.append(f"{topic_green} {dataUsr.greenColorTime}\n")
+    save_logs()
+
+    # Restablecer flag de actualización
+    dataUsr.updatePub = 0
+    mqttc.user_data_set(dataUsr)
+
+    time.sleep(1)
+
+    # Cada 5 segundos, publicar la detección de autos
+    if counterEv % 5 == 0:
+        carDetection = random.randint(60, 100) if dataUsr.redColorTime < 40 else random.randint(10, 43)
+        mqttc.publish(topic_car_detection, carDetection)
+        log_queue.append(f"{topic_car_detection} {carDetection}\n")
+        save_logs()
+
+    counterEv += 1
+    if counterEv == 10000:
+        counterEv = 0

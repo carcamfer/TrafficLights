@@ -27,10 +27,11 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
 
   const handleTimeChange = (type: 'inputGreen' | 'inputRed', value: number) => {
     const deviceId = id.toString().padStart(8, '0'); // Convertir ID a formato 00000001
-    const topic = `smartSemaphore/lora_Device/${deviceId}/set/time/light/${type === 'inputGreen' ? 'green' : 'red'}`;
+    const topic = `smartSemaphore/lora_Device/${deviceId}/control`;
+    const command = `${type === 'inputGreen' ? 'green' : 'red'}=${value}`;
 
     // Publicar al tópico MQTT
-    client.publish(topic, value.toString(), { qos: 0, retain: false }, (error) => {
+    client.publish(topic, command, { qos: 0, retain: false }, (error) => {
       if (error) {
         console.error('Error al publicar:', error);
       }
