@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import mqtt from 'mqtt';
-import { useToast } from "@/hooks/use-toast";
 
 interface TrafficLightControlProps {
   id: number;
@@ -23,77 +22,21 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
   feedbackRed,
   onTimeChange
 }) => {
-  const [client, setClient] = useState<mqtt.MqttClient | null>(null);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    // Conectar al broker MQTT
-    const mqttClient = mqtt.connect('mqtt://localhost:1883', {
-      clientId: `traffic_control_web_${Math.random().toString(16).substring(2, 10)}`,
-      clean: true,
-      keepalive: 60,
-      reconnectPeriod: 2000
-    });
-
-    mqttClient.on('connect', () => {
-      console.log('Conectado al broker MQTT');
-      toast({
-        title: "Conexión MQTT establecida",
-        description: "Conectado al broker MQTT correctamente"
-      });
-    });
-
-    mqttClient.on('error', (err) => {
-      console.error('Error MQTT:', err);
-      toast({
-        title: "Error de conexión MQTT",
-        description: "No se pudo conectar al broker MQTT",
-        variant: "destructive"
-      });
-    });
-
-    setClient(mqttClient);
-
-    return () => {
-      if (mqttClient) {
-        mqttClient.end();
-      }
-    };
-  }, [toast]);
+  // Conectar al broker MQTT
+  const client = mqtt.connect('mqtt://localhost:1883');
 
   const handleTimeChange = (type: 'inputGreen' | 'inputRed', value: number) => {
-    if (!client) {
-      toast({
-        title: "Error",
-        description: "No hay conexión con el broker MQTT",
-        variant: "destructive"
-      });
-      return;
-    }
+    const deviceId = id.toString().padStart(8, '0'); // Convertir ID a formato 00000001
+    const topic = `smartSemaphore/lora_Device/${deviceId}/set/time/light/${type === 'inputGreen' ? 'green' : 'red'}`;
 
-    const deviceId = id.toString().padStart(8, '0');
-    const topic = `smartSemaphore/lora_Device/${deviceId}/control`;
-    const command = `${type === 'inputGreen' ? 'green' : 'red'}=${value}`;
-
-    console.log(`Enviando comando al tópico ${topic}:`, command);
-
-    client.publish(topic, command, { qos: 1 }, (error) => {
+    // Publicar al tópico MQTT
+    client.publish(topic, value.toString(), { qos: 0, retain: false }, (error) => {
       if (error) {
         console.error('Error al publicar:', error);
-        toast({
-          title: "Error",
-          description: "No se pudo enviar el comando al semáforo",
-          variant: "destructive"
-        });
-      } else {
-        console.log('Comando enviado exitosamente');
-        toast({
-          title: "Comando enviado",
-          description: `Tiempo ${type === 'inputGreen' ? 'verde' : 'rojo'} actualizado a ${value} segundos`
-        });
       }
     });
 
+    // Actualizar UI
     onTimeChange(id, type, value);
   };
 

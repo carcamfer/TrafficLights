@@ -158,9 +158,7 @@ function App() {
 
     client.on('message', (topic, message) => {
       const topicParts = topic.split('/');
-      const deviceId = parseInt(topicParts[2]); // Obtener el ID del dispositivo del tópico
-
-      // Actualizar estado basado en el mensaje MQTT
+      const deviceId = parseInt(topicParts[2]);
       if (topic.includes('time/light/green')) {
         const feedbackGreen = parseInt(message.toString());
         setTrafficLights(prev =>
@@ -176,17 +174,10 @@ function App() {
           )
         );
       } else if (topic.includes('state')) {
-        const state = message.toString().toLowerCase() as 'red' | 'yellow' | 'green';
+        const state = message.toString() as 'red' | 'yellow' | 'green';
         setTrafficLights(prev =>
           prev.map(light =>
             light.id === deviceId ? { ...light, state } : light
-          )
-        );
-      } else if (topic.includes('status/iot')) {
-        const iotStatus = message.toString().toLowerCase() as 'connected' | 'disconnected' | 'error';
-        setTrafficLights(prev =>
-          prev.map(light =>
-            light.id === deviceId ? { ...light, iotStatus } : light
           )
         );
       }

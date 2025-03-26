@@ -3,8 +3,6 @@ import cors from "cors";
 import mqtt from "mqtt";
 import WebSocket from "ws";
 import { setupVite, serveStatic, log } from "./vite";
-import fs from 'fs';
-import path from 'path';
 
 const app = express();
 app.use(express.json());
@@ -25,7 +23,6 @@ const wsServer = new WebSocket.Server({ noServer: true, path: '/ws' });
 let systemLogs: string[] = [];
 
 mqttClient.on('connect', () => {
-  console.log('Servidor conectado al broker MQTT');
   mqttClient.subscribe('#');
 });
 
@@ -35,56 +32,20 @@ mqttClient.on('error', (error) => {
 
 mqttClient.on('message', (topic, message) => {
   const logEntry = `${topic} ${message.toString()}`;
-  if (systemLogs.length >= 100) {
+  if (systemLogs.length >= 10) {
     systemLogs.pop();
   }
   systemLogs.unshift(logEntry);
 
   wsServer.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify({
-        type: 'mqtt',
-        message: logEntry
-      }));
+      client.send(logEntry); // Simplified message sending
     }
   });
 });
 
 app.get("/api/logs", (_req, res) => {
-  try {
-    // Leer todos los archivos de log de los simuladores
-    const logFiles = fs.readdirSync('.')
-      .filter(file => file.match(/^mqtt_logs_\d{8}\.txt$/));
-
-    console.log('Archivos de log encontrados:', logFiles);
-
-    let allLogs: string[] = [];
-
-    // Combinar los logs de todos los archivos
-    logFiles.forEach(file => {
-      try {
-        const content = fs.readFileSync(file, 'utf-8');
-        const logs = content.split('\n')
-          .filter(log => log.trim())
-          .map(log => log.trim());
-        allLogs = allLogs.concat(logs);
-      } catch (error) {
-        console.error(`Error leyendo archivo ${file}:`, error);
-      }
-    });
-
-    // Ordenar los logs por tiempo (más recientes primero) y tomar los últimos 10
-    allLogs.sort().reverse();
-    const recentLogs = allLogs.slice(0, 10);
-
-    console.log('Total de logs combinados:', allLogs.length);
-    console.log('Logs recientes:', recentLogs);
-
-    res.json({ logs: recentLogs });
-  } catch (error) {
-    console.error('Error al leer los logs:', error);
-    res.status(500).json({ error: 'Error al leer los logs' });
-  }
+  res.json(systemLogs);
 });
 
 app.get("/api/status", (_req, res) => {
@@ -115,6 +76,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
     console.log(`Servidor ejecutándose en el puerto ${port}`);
   });
 
+  // Configurar WebSocket Server con path específico
   serverInstance.on('upgrade', (request, socket, head) => {
     if (request.url === '/ws') {
       wsServer.handleUpgrade(request, socket, head, socket => {

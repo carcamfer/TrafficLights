@@ -1,5 +1,3 @@
-smartSemaphore/lora_Device/00000009/info/time/light/red 40
-smartSemaphore/lora_Device/00000009/info/time/light/green 40
-smartSemaphore/lora_Device/00000009/info/cars/detect 16
-smartSemaphore/lora_Device/00000009/info/time/light/red 40
-smartSemaphore/lora_Device/00000009/info/time/light/green 40
+MQTT log 1: Device connected
+MQTT log 2: Message received on topic /traffic/light1
+MQTT log 3: Device status update
