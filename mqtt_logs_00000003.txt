@@ -1,0 +1,10 @@
+smartSemaphore/lora_Device/00000003/info/time/light/green 40
+smartSemaphore/lora_Device/00000003/info/time/light/red 40
+smartSemaphore/lora_Device/00000003/info/time/light/green 40
+smartSemaphore/lora_Device/00000003/info/time/light/red 40
+smartSemaphore/lora_Device/00000003/info/time/light/green 40
+smartSemaphore/lora_Device/00000003/info/cars/detect 29
+smartSemaphore/lora_Device/00000003/info/time/light/red 40
+smartSemaphore/lora_Device/00000003/info/time/light/green 40
+smartSemaphore/lora_Device/00000003/info/time/light/red 40
+smartSemaphore/lora_Device/00000003/info/time/light/green 40

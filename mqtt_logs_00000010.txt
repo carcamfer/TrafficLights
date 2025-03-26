@@ -1,0 +1,2 @@
+smartSemaphore/lora_Device/00000010/info/time/light/red 40
+smartSemaphore/lora_Device/00000010/info/time/light/green 40

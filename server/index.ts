@@ -3,6 +3,8 @@ import cors from "cors";
 import mqtt from "mqtt";
 import WebSocket from "ws";
 import { setupVite, serveStatic, log } from "./vite";
+import fs from 'fs';
+import path from 'path';
 
 const app = express();
 app.use(express.json());
@@ -32,20 +34,46 @@ mqttClient.on('error', (error) => {
 
 mqttClient.on('message', (topic, message) => {
   const logEntry = `${topic} ${message.toString()}`;
-  if (systemLogs.length >= 10) {
+  if (systemLogs.length >= 100) {
     systemLogs.pop();
   }
   systemLogs.unshift(logEntry);
 
   wsServer.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(logEntry); // Simplified message sending
+      client.send(logEntry);
     }
   });
 });
 
 app.get("/api/logs", (_req, res) => {
-  res.json(systemLogs);
+  try {
+    // Leer todos los archivos de log de los simuladores
+    const files = fs.readdirSync('.');
+    const logFiles = files.filter(file => file.startsWith('mqtt_logs_') && file.endsWith('.txt'));
+
+    let allLogs: string[] = [];
+
+    // Combinar los logs de todos los archivos
+    logFiles.forEach(file => {
+      try {
+        const content = fs.readFileSync(file, 'utf-8');
+        const logs = content.split('\n').filter(log => log.trim());
+        allLogs = allLogs.concat(logs);
+      } catch (error) {
+        console.error(`Error leyendo archivo ${file}:`, error);
+      }
+    });
+
+    // Ordenar los logs por tiempo (más recientes primero) y tomar los últimos 10
+    allLogs.sort().reverse();
+    const recentLogs = allLogs.slice(0, 10);
+
+    res.json({ logs: recentLogs });
+  } catch (error) {
+    console.error('Error al leer los logs:', error);
+    res.status(500).json({ error: 'Error al leer los logs' });
+  }
 });
 
 app.get("/api/status", (_req, res) => {
@@ -76,7 +104,6 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
     console.log(`Servidor ejecutándose en el puerto ${port}`);
   });
 
-  // Configurar WebSocket Server con path específico
   serverInstance.on('upgrade', (request, socket, head) => {
     if (request.url === '/ws') {
       wsServer.handleUpgrade(request, socket, head, socket => {

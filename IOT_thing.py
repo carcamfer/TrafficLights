@@ -43,7 +43,10 @@ topic_current_state = f"{base_topic}/status/current"
 log_queue = deque(maxlen=10)
 
 def save_logs():
-    with open("mqtt_logs.txt", "w") as file:
+    # Usar un archivo de logs diferente para cada dispositivo
+    log_file = f"mqtt_logs_{device_id}.txt"
+    print(f"Guardando logs en: {log_file}")  # Añadir print para debug
+    with open(log_file, "w") as file:
         file.writelines(log_queue)
 
 def on_connect(client, userdata, flags, rc):
@@ -51,6 +54,7 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe(topic_set_duration)
     client.subscribe(topic_control)
     client.publish(topic_iot_status, "Connected")
+    print(f"Device {device_id} subscribed to topics and published status")  # Añadir print para debug
 
 def on_message(client, userdata, msg):
     message = f"{msg.topic} {msg.payload.decode()}"
@@ -96,6 +100,8 @@ while True:
     # Guardar logs
     log_queue.append(f"{topic_red} {traffic_light.redColorTime}\n")
     log_queue.append(f"{topic_green} {traffic_light.greenColorTime}\n")
+    log_queue.append(f"{topic_current_state} {traffic_light.current_state}\n")
+    log_queue.append(f"{topic_iot_status} Connected\n")
     save_logs()
 
     # Alternar estado
