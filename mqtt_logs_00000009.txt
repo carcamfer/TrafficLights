@@ -1,9 +1,9 @@
 smartSemaphore/lora_Device/00000009/status/iot Connected
+smartSemaphore/lora_Device/00000009/info/cars/detect 42
 smartSemaphore/lora_Device/00000009/info/time/light/red 40
 smartSemaphore/lora_Device/00000009/info/time/light/green 40
 smartSemaphore/lora_Device/00000009/status/current Red
 smartSemaphore/lora_Device/00000009/status/iot Connected
-smartSemaphore/lora_Device/00000009/info/cars/detect 43
 smartSemaphore/lora_Device/00000009/info/time/light/red 40
 smartSemaphore/lora_Device/00000009/info/time/light/green 40
 smartSemaphore/lora_Device/00000009/status/current Green

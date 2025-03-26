@@ -21,8 +21,10 @@ class TrafficLight:
     def update(self, redColorTime=None, greenColorTime=None):
         if redColorTime is not None:
             self.redColorTime = redColorTime
+            logger.info(f"Tiempo rojo actualizado a: {redColorTime}")
         if greenColorTime is not None:
             self.greenColorTime = greenColorTime
+            logger.info(f"Tiempo verde actualizado a: {greenColorTime}")
 
 if len(sys.argv) != 2:
     print("Usage: python3 IOT_thing.py <device_id>")
@@ -58,8 +60,8 @@ def save_logs():
 
 def on_connect(client, userdata, flags, rc):
     logger.info(f"Connected with result code {rc}", extra={'device_id': device_id})
-    client.subscribe(topic_set_duration)
-    client.subscribe(topic_control)
+    # Suscribirse a todos los tópicos relevantes para este dispositivo
+    client.subscribe([(f"{base_topic}/#", 1)])
     client.publish(topic_iot_status, "Connected", qos=1)
     logger.info("Suscrito a tópicos y estado publicado", extra={'device_id': device_id})
 
@@ -70,33 +72,41 @@ def on_disconnect(client, userdata, rc):
 
 def on_message(client, userdata, msg):
     try:
-        message = f"{msg.topic} {msg.payload.decode()}"
-        logger.info(f"Mensaje recibido: {message}", extra={'device_id': device_id})
-
-        log_queue.append(message + "\n")
-        save_logs()
-
-        topic_received = msg.topic
+        topic = msg.topic
         payload = msg.payload.decode()
+        logger.info(f"Mensaje recibido: {topic} {payload}", extra={'device_id': device_id})
 
-        if topic_received == topic_control:
+        if topic == topic_control:
             try:
                 key, value = payload.split("=")
                 value = int(value)
+                logger.info(f"Control recibido: {key}={value}", extra={'device_id': device_id})
 
                 if key == "red":
-                    traffic_light.redColorTime = value
+                    traffic_light.update(redColorTime=value)
                 elif key == "green":
-                    traffic_light.greenColorTime = value
+                    traffic_light.update(greenColorTime=value)
 
-                logger.info(f"🔄 {key} actualizado a {value} segundos", extra={'device_id': device_id})
+                # Publicar inmediatamente los nuevos valores
+                client.publish(topic_red, traffic_light.redColorTime, qos=1)
+                client.publish(topic_green, traffic_light.greenColorTime, qos=1)
+
+                logger.info(f"Valores actualizados: rojo={traffic_light.redColorTime}, verde={traffic_light.greenColorTime}", 
+                          extra={'device_id': device_id})
             except Exception as e:
-                logger.error(f"❌ Error procesando mensaje: {e}", extra={'device_id': device_id})
+                logger.error(f"Error procesando control: {e}", extra={'device_id': device_id})
+
+        # Guardar el mensaje en el log
+        log_entry = f"{topic} {payload}\n"
+        log_queue.append(log_entry)
+        save_logs()
+
     except Exception as e:
         logger.error(f"Error en on_message: {e}", extra={'device_id': device_id})
 
 # Configurar cliente MQTT
-mqttc = mqtt.Client()
+client_id = f"traffic_light_{device_id}_{random.randint(0, 1000)}"
+mqttc = mqtt.Client(client_id=client_id)
 mqttc.on_connect = on_connect
 mqttc.on_message = on_message
 mqttc.on_disconnect = on_disconnect
@@ -113,13 +123,14 @@ counterEv = 0
 
 while True:
     try:
-        # Publicar los tiempos de los semáforos
+        # Publicar estado actual
         mqttc.publish(topic_red, traffic_light.redColorTime, qos=1)
         mqttc.publish(topic_green, traffic_light.greenColorTime, qos=1)
         mqttc.publish(topic_current_state, traffic_light.current_state, qos=1)
         mqttc.publish(topic_iot_status, "Connected", qos=1)
 
-        # Guardar logs
+
+        # Guardar en logs - Simplified logging
         log_queue.append(f"{topic_red} {traffic_light.redColorTime}\n")
         log_queue.append(f"{topic_green} {traffic_light.greenColorTime}\n")
         log_queue.append(f"{topic_current_state} {traffic_light.current_state}\n")
@@ -129,8 +140,6 @@ while True:
         # Alternar estado
         traffic_light.current_state = "Green" if traffic_light.current_state == "Red" else "Red"
 
-        time.sleep(1)
-
         # Cada 5 segundos, publicar la detección de autos
         if counterEv % 5 == 0:
             carDetection = random.randint(60, 100) if traffic_light.redColorTime < 40 else random.randint(10, 43)
@@ -138,9 +147,9 @@ while True:
             log_queue.append(f"{topic_car_detection} {carDetection}\n")
             save_logs()
 
-        counterEv += 1
-        if counterEv == 10000:
-            counterEv = 0
+        counterEv = (counterEv + 1) % 10000
+        time.sleep(1)
+
     except Exception as e:
         logger.error(f"Error en el ciclo principal: {e}", extra={'device_id': device_id})
         time.sleep(1)  # Esperar antes de intentar de nuevo
