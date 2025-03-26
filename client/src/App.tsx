@@ -3,8 +3,6 @@ import MapView from './components/MapView';
 import TrafficLightControl from './components/TrafficLightControl';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from '@tanstack/react-query'; // Assuming react-query is used
-import mqtt from 'mqtt'; // Importing the MQTT library
-
 
 interface TrafficLightData {
   id: number;
@@ -144,50 +142,6 @@ function App() {
     }
   }, [logsData]);
 
-  useEffect(() => {
-    const client = mqtt.connect('mqtt://localhost:1883');
-
-    client.on('connect', () => {
-      console.log('Conectado al broker MQTT');
-      trafficLights.forEach(light => {
-        const deviceId = light.id.toString().padStart(8, '0');
-        const baseTopic = `smartSemaphore/lora_Device/${deviceId}/info/#`;
-        client.subscribe(baseTopic);
-      });
-    });
-
-    client.on('message', (topic, message) => {
-      const topicParts = topic.split('/');
-      const deviceId = parseInt(topicParts[2]);
-      if (topic.includes('time/light/green')) {
-        const feedbackGreen = parseInt(message.toString());
-        setTrafficLights(prev =>
-          prev.map(light =>
-            light.id === deviceId ? { ...light, feedbackGreen } : light
-          )
-        );
-      } else if (topic.includes('time/light/red')) {
-        const feedbackRed = parseInt(message.toString());
-        setTrafficLights(prev =>
-          prev.map(light =>
-            light.id === deviceId ? { ...light, feedbackRed } : light
-          )
-        );
-      } else if (topic.includes('state')) {
-        const state = message.toString() as 'red' | 'yellow' | 'green';
-        setTrafficLights(prev =>
-          prev.map(light =>
-            light.id === deviceId ? { ...light, state } : light
-          )
-        );
-      }
-    });
-
-    return () => {
-      client.end();
-    };
-  }, []);
-
   const handleTimeChange = (id: number, type: 'inputGreen' | 'inputRed', value: number) => {
     setTrafficLights(prev =>
       prev.map(light =>
@@ -213,13 +167,15 @@ function App() {
       </header>
       <main className="max-w-7xl mx-auto py-6 px-4">
         <div className="grid grid-cols-12 gap-6">
+          {/* Mapa */}
           <div className="col-span-6">
-            <MapView
-              trafficLights={trafficLights}
+            <MapView 
+              trafficLights={trafficLights} 
               onPositionChange={handlePositionChange}
             />
           </div>
 
+          {/* Controles */}
           <div className="col-span-3">
             <Card>
               <CardHeader>
@@ -245,6 +201,7 @@ function App() {
             </Card>
           </div>
 
+          {/* Estado del Sistema */}
           <div className="col-span-3">
             <Card>
               <CardHeader>
@@ -268,8 +225,8 @@ function App() {
                       </div>
                     ) : (
                       systemLogs.map((log, index) => (
-                        <div
-                          key={index}
+                        <div 
+                          key={index} 
                           className="p-2 bg-gray-50 rounded border border-gray-200 break-all hover:bg-gray-100"
                         >
                           {log}
