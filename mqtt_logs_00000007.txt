@@ -1,9 +1,10 @@
+smartSemaphore/lora_Device/00000007/status/current Green
+smartSemaphore/lora_Device/00000007/status/iot Connected
 smartSemaphore/lora_Device/00000007/info/time/light/red 40
 smartSemaphore/lora_Device/00000007/info/time/light/green 40
-smartSemaphore/lora_Device/00000007/info/cars/detect 28
+smartSemaphore/lora_Device/00000007/status/current Red
+smartSemaphore/lora_Device/00000007/status/iot Connected
 smartSemaphore/lora_Device/00000007/info/time/light/red 40
 smartSemaphore/lora_Device/00000007/info/time/light/green 40
-smartSemaphore/lora_Device/00000007/info/time/light/red 40
-smartSemaphore/lora_Device/00000007/info/time/light/green 40
-smartSemaphore/lora_Device/00000007/info/time/light/red 40
-smartSemaphore/lora_Device/00000007/info/time/light/green 40
+smartSemaphore/lora_Device/00000007/status/current Green
+smartSemaphore/lora_Device/00000007/status/iot Connected

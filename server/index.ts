@@ -25,6 +25,7 @@ const wsServer = new WebSocket.Server({ noServer: true, path: '/ws' });
 let systemLogs: string[] = [];
 
 mqttClient.on('connect', () => {
+  console.log('Servidor conectado al broker MQTT');
   mqttClient.subscribe('#');
 });
 
@@ -41,7 +42,10 @@ mqttClient.on('message', (topic, message) => {
 
   wsServer.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(logEntry);
+      client.send(JSON.stringify({
+        type: 'mqtt',
+        message: logEntry
+      }));
     }
   });
 });
@@ -49,8 +53,10 @@ mqttClient.on('message', (topic, message) => {
 app.get("/api/logs", (_req, res) => {
   try {
     // Leer todos los archivos de log de los simuladores
-    const files = fs.readdirSync('.');
-    const logFiles = files.filter(file => file.startsWith('mqtt_logs_') && file.endsWith('.txt'));
+    const logFiles = fs.readdirSync('.')
+      .filter(file => file.match(/^mqtt_logs_\d{8}\.txt$/));
+
+    console.log('Archivos de log encontrados:', logFiles);
 
     let allLogs: string[] = [];
 
@@ -58,7 +64,9 @@ app.get("/api/logs", (_req, res) => {
     logFiles.forEach(file => {
       try {
         const content = fs.readFileSync(file, 'utf-8');
-        const logs = content.split('\n').filter(log => log.trim());
+        const logs = content.split('\n')
+          .filter(log => log.trim())
+          .map(log => log.trim());
         allLogs = allLogs.concat(logs);
       } catch (error) {
         console.error(`Error leyendo archivo ${file}:`, error);
@@ -68,6 +76,9 @@ app.get("/api/logs", (_req, res) => {
     // Ordenar los logs por tiempo (más recientes primero) y tomar los últimos 10
     allLogs.sort().reverse();
     const recentLogs = allLogs.slice(0, 10);
+
+    console.log('Total de logs combinados:', allLogs.length);
+    console.log('Logs recientes:', recentLogs);
 
     res.json({ logs: recentLogs });
   } catch (error) {
