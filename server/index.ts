@@ -2,70 +2,92 @@ import express from "express";
 import cors from "cors";
 import mqtt from "mqtt";
 import WebSocket from "ws";
-import { setupVite, serveStatic } from "./vite";
+import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(express.urlencoded({ extended: false }));
 
-const mqttClient = mqtt.connect('mqtt://0.0.0.0:1883', {
+// Configuración MQTT
+const mqttClient = mqtt.connect('mqtt://localhost:1883', {
   clientId: 'traffic_control_server_' + Math.random().toString(16).substr(2, 8),
   clean: true,
   connectTimeout: 4000,
   reconnectPeriod: 1000,
+  keepalive: 60,
+  resubscribe: true
 });
 
-const wsServer = new WebSocket.Server({ noServer: true, path: '/' });
+const wsServer = new WebSocket.Server({ noServer: true, path: '/ws' });
+let systemLogs: string[] = [];
 
 mqttClient.on('connect', () => {
-  console.log('Connected to MQTT broker');
-  mqttClient.subscribe('smartSemaphore/lora_Device/00000001/info/#');
+  mqttClient.subscribe('#');
 });
 
-wsServer.on('connection', (ws) => {
-  console.log('Client connected');
-
-  ws.on('message', (message) => {
-    try {
-      const data = JSON.parse(message.toString());
-      if (data.type === 'lightTime') {
-        const topic = `smartSemaphore/lora_Device/00000001/set/time/light/${data.color}`;
-        mqttClient.publish(topic, data.value.toString());
-      }
-    } catch (error) {
-      console.error('Error processing message:', error);
-    }
-  });
+mqttClient.on('error', (error) => {
+  console.error(`Error MQTT: ${error.message}`);
 });
 
 mqttClient.on('message', (topic, message) => {
-  const payload = message.toString();
-  wsServer.clients.forEach((client) => {
+  const logEntry = `${topic} ${message.toString()}`;
+  if (systemLogs.length >= 10) {
+    systemLogs.pop();
+  }
+  systemLogs.unshift(logEntry);
+
+  wsServer.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify({ topic, payload }));
+      client.send(logEntry); // Simplified message sending
     }
   });
 });
 
-const server = app.listen(5000, '0.0.0.0', () => {
-  console.log('Server running on port 5000');
+app.get("/api/logs", (_req, res) => {
+  res.json(systemLogs);
 });
 
-server.on('upgrade', (request, socket, head) => {
-  wsServer.handleUpgrade(request, socket, head, (ws) => {
-    wsServer.emit('connection', ws, request);
-  });
+app.get("/api/status", (_req, res) => {
+  res.json({ status: "ok", message: "Servidor de semáforos funcionando" });
 });
 
-if (app.get("env") === "development") {
-  setupVite(app, server);
-} else {
-  serveStatic(app);
-}
-
-// Error handling middleware (retained from original)
+// Error handling middleware
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Error interno del servidor";
   res.status(status).json({ message });
 });
+
+(async () => {
+  const server = app;
+
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+
+  const port = 5000;
+  const serverInstance = server.listen({
+    port,
+    host: "0.0.0.0",
+  }, () => {
+    console.log(`Servidor ejecutándose en el puerto ${port}`);
+  });
+
+  // Configurar WebSocket Server con path específico
+  serverInstance.on('upgrade', (request, socket, head) => {
+    if (request.url === '/ws') {
+      wsServer.handleUpgrade(request, socket, head, socket => {
+        wsServer.emit('connection', socket, request);
+        socket.on('error', (error) => {
+          console.error(`[WebSocket] Error en la conexión: ${error.message}`);
+        });
+        socket.on('close', () => {
+          console.log('[WebSocket] Conexión cerrada');
+        });
+      });
+    }
+  });
+})();
