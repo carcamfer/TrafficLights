@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import MapView from './components/MapView';
 import TrafficLightControl from './components/TrafficLightControl';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useMQTT } from './hooks/use-mqtt';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { useQuery } from '@tanstack/react-query'; // Assuming react-query is used
 
 interface TrafficLightData {
   id: number;
@@ -120,34 +119,28 @@ function App() {
     }
   ]);
 
-  // Usar el hook de MQTT para comunicación con el servidor
-  const { 
-    isConnected, 
-    iotConnected, 
-    logs, 
-    feedbackGreen, 
-    feedbackRed, 
-    currentState, 
-    setTrafficLightTime 
-  } = useMQTT();
+  const [systemLogs, setSystemLogs] = useState<string[]>([]);
+  const [wsConnected, setWsConnected] = useState(false);
 
-  // Actualizar los semáforos cuando recibimos feedback del servidor
+  const { data: logsData, error: logsError, isFetching } = useQuery({
+    queryKey: ['logs'],
+    queryFn: async () => {
+      const response = await fetch('http://localhost:5000/logs');
+      if (!response.ok) {
+        throw new Error('Error al obtener logs');
+      }
+      const data = await response.json();
+      console.log("Logs recibidos:", data);
+      return data;
+    },
+    refetchInterval: 2000, // Actualizar cada 2 segundos
+  });
+
   useEffect(() => {
-    if (feedbackGreen > 0 || feedbackRed > 0) {
-      // Actualizar para el semáforo #1 (por ahora solo actualizamos el primero)
-      setTrafficLights(prev =>
-        prev.map(light =>
-          light.id === 1 ? { 
-            ...light, 
-            feedbackGreen: feedbackGreen || light.feedbackGreen,
-            feedbackRed: feedbackRed || light.feedbackRed,
-            iotStatus: iotConnected ? 'connected' : 'disconnected',
-            state: currentState || light.state
-          } : light
-        )
-      );
+    if (logsData?.logs) {
+      setSystemLogs(logsData.logs);
     }
-  }, [feedbackGreen, feedbackRed, iotConnected, currentState]);
+  }, [logsData]);
 
   const handleTimeChange = (id: number, type: 'inputGreen' | 'inputRed', value: number) => {
     setTrafficLights(prev =>
@@ -155,11 +148,6 @@ function App() {
         light.id === id ? { ...light, [type]: value } : light
       )
     );
-  };
-
-  const handleSendTime = (id: number, color: 'green' | 'red', value: number) => {
-    console.log(`Enviando tiempo ${color}: ${value} para semáforo #${id}`);
-    setTrafficLightTime(color, value);
   };
 
   const handlePositionChange = (id: number, newPosition: [number, number]) => {
@@ -178,27 +166,23 @@ function App() {
         </div>
       </header>
       <main className="max-w-7xl mx-auto py-6 px-4">
-        <ResizablePanelGroup direction="horizontal" className="min-h-[600px] border rounded-lg">
-          {/* Panel del Mapa */}
-          <ResizablePanel defaultSize={50} minSize={30}>
-            <div className="h-full p-3">
-              <MapView 
-                trafficLights={trafficLights} 
-                onPositionChange={handlePositionChange}
-              />
-            </div>
-          </ResizablePanel>
-          
-          <ResizableHandle />
-          
-          {/* Panel de Control de Tiempos */}
-          <ResizablePanel defaultSize={25} minSize={20}>
-            <Card className="border-0 shadow-none rounded-none h-full">
-              <CardHeader className="px-4 py-2">
+        <div className="grid grid-cols-12 gap-6">
+          {/* Mapa */}
+          <div className="col-span-6">
+            <MapView 
+              trafficLights={trafficLights} 
+              onPositionChange={handlePositionChange}
+            />
+          </div>
+
+          {/* Controles */}
+          <div className="col-span-3">
+            <Card>
+              <CardHeader>
                 <CardTitle>Control de Tiempos</CardTitle>
               </CardHeader>
-              <CardContent className="px-2">
-                <div className="h-[calc(100vh-160px)] overflow-y-auto pr-2">
+              <CardContent>
+                <div className="space-y-4 h-[500px] overflow-y-auto pr-2">
                   {trafficLights.map(light => (
                     <TrafficLightControl
                       key={light.id}
@@ -210,41 +194,37 @@ function App() {
                       inputRed={light.inputRed}
                       feedbackRed={light.feedbackRed}
                       onTimeChange={handleTimeChange}
-                      onSendTime={handleSendTime}
                     />
                   ))}
                 </div>
               </CardContent>
             </Card>
-          </ResizablePanel>
-          
-          <ResizableHandle />
-          
-          {/* Panel de Estado del Sistema */}
-          <ResizablePanel defaultSize={25} minSize={20}>
-            <Card className="border-0 shadow-none rounded-none h-full">
-              <CardHeader className="px-4 py-2">
+          </div>
+
+          {/* Estado del Sistema */}
+          <div className="col-span-3">
+            <Card>
+              <CardHeader>
                 <CardTitle>Estado del Sistema</CardTitle>
               </CardHeader>
-              <CardContent className="px-2">
+              <CardContent>
                 <div className="space-y-2">
                   <div className={`px-2 py-1 rounded-md text-sm ${
-                    !isConnected ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                    isFetching ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
                   }`}>
-                    WebSocket: {!isConnected ? 'Cargando...' : 'Conectado'}
+                    WebSocket: {isFetching ? 'Cargando...' : 'Conectado'}
                   </div>
-                  <div className={`px-2 py-1 rounded-md text-sm ${
-                    !iotConnected ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                  }`}>
-                    IoT: {!iotConnected ? 'Desconectado' : 'Conectado'}
-                  </div>
-                  <div className="h-[calc(100vh-200px)] overflow-y-auto space-y-2 text-xs font-mono">
-                    {logs.length === 0 ? (
+                  <div className="h-[500px] overflow-y-auto space-y-2 text-xs font-mono">
+                    {logsError ? (
+                      <div className="p-2 bg-red-50 text-red-800 rounded border border-red-200">
+                        Error al cargar logs: {logsError.message}
+                      </div>
+                    ) : systemLogs.length === 0 ? (
                       <div className="p-2 bg-gray-50 text-gray-500 rounded border border-gray-200">
                         No hay logs disponibles
                       </div>
                     ) : (
-                      logs.map((log, index) => (
+                      systemLogs.map((log, index) => (
                         <div 
                           key={index} 
                           className="p-2 bg-gray-50 rounded border border-gray-200 break-all hover:bg-gray-100"
@@ -257,8 +237,8 @@ function App() {
                 </div>
               </CardContent>
             </Card>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+          </div>
+        </div>
       </main>
     </div>
   );
