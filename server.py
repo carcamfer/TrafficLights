@@ -24,6 +24,7 @@ def send_times():
         device_id = "00000001"  # Default device ID
         base_topic = f"smartSemaphore/lora_Device/{device_id}/set/time/light"
         
+        # Publicar al mismo formato que el simulador
         if 'redColorTime' in data:
             value = int(data['redColorTime'])
             mqtt_client.publish(f"{base_topic}/red", value)
@@ -33,6 +34,9 @@ def send_times():
             value = int(data['greenColorTime'])
             mqtt_client.publish(f"{base_topic}/green", value)
             logger.info(f"Published green time: {value}")
+            
+        # También publicamos el tiempo amarillo por defecto como el simulador
+        mqtt_client.publish(f"{base_topic}/yellow", 2)
             
         return jsonify({"status": "success", "message": "Values published successfully"})
     except ValueError as e:
