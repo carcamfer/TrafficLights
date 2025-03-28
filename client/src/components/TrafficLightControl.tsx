@@ -9,6 +9,7 @@ interface TrafficLightControlProps {
   inputRed: number;
   feedbackRed: number;
   onTimeChange: (id: number, type: 'inputGreen' | 'inputRed', value: number) => void;
+  systemLogs: string[]; // Added systemLogs prop
 }
 
 const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
@@ -19,7 +20,8 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
   feedbackGreen,
   inputRed,
   feedbackRed,
-  onTimeChange
+  onTimeChange,
+  systemLogs // Added systemLogs prop
 }) => {
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
@@ -79,7 +81,7 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Feedback Verde (s)</span>
           <span className="border rounded-md px-3 py-1.5 w-24 text-right bg-gray-50">
-            {feedbackGreen}
+            {systemLogs?.find(log => log.includes(`smartSemaphore/lora_Device/${id.toString().padStart(8, '0')}/info/time/light/green`))?.split(' ').pop() || feedbackGreen}
           </span>
         </div>
 
@@ -124,7 +126,7 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Feedback Rojo (s)</span>
           <span className="border rounded-md px-3 py-1.5 w-24 text-right bg-gray-50">
-            {feedbackRed}
+            {systemLogs?.find(log => log.includes(`smartSemaphore/lora_Device/${id.toString().padStart(8, '0')}/info/time/light/red`))?.split(' ').pop() || feedbackRed}
           </span>
         </div>
 
