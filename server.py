@@ -1,71 +1,54 @@
-    from flask import Flask, jsonify, request
-    from flask_cors import CORS
-    import os
-    import paho.mqtt.client as mqtt
-    import logging
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+import os
+import paho.mqtt.client as mqtt
+import logging
 
-    app = Flask(__name__)
-    CORS(app)  # Permitir solicitudes desde React o cualquier frontend
+app = Flask(__name__)
+CORS(app)
 
-    # Definir archivo de logs
-    LOG_FILE = "mqtt_logs.txt"
+# Definir archivo de logs
+LOG_FILE = "mqtt_logs.txt"
 
-    # Configurar MQTT (cambia localhost por el broker en Replit si es necesario)
-    MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")  # Usa broker.hivemq.com en Replit
-    MQTT_PORT = 1883
+# Configurar MQTT (cambia localhost por el broker en Replit si es necesario)
+MQTT_BROKER = os.getenv("MQTT_BROKER", "0.0.0.0")  # Usa broker.hivemq.com en Replit
+MQTT_PORT = 1883
+device_id = "00000001"
 
-    mqtt_client = mqtt.Client()
-    mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    mqtt_client.loop_start()
+mqtt_client = mqtt.Client()
+mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
+mqtt_client.loop_start()
 
-    # Configurar logging
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    @app.route('/logs', methods=['GET'])
-    def get_logs():
-        """Devuelve los últimos 10 logs guardados en el archivo."""
-        try:
-            if os.path.exists(LOG_FILE):
-                with open(LOG_FILE, "r") as file:
-                    logs = file.readlines()
+@app.route('/')
+def index():
+    return "Smart Semaphore API Server Running"
 
-                logs = logs[-10:]  # Últimos 10 logs
-                logs = [log.strip() for log in logs]  # Limpiar saltos de línea
+@app.route('/send', methods=['POST'])
+def send_times():
+    try:
+        data = request.json
+        base_topic = f"smartSemaphore/lora_Device/{device_id}/set/time/light"
 
-                return jsonify({"logs": logs})
-            else:
-                return jsonify({"logs": [], "error": "Log file not found"}), 404
-        except Exception as e:
-            return jsonify({"logs": [], "error": str(e)}), 500
+        # Publicar tiempos en MQTT
+        if 'redColorTime' in data:
+            mqtt_client.publish(f"{base_topic}/red", data['redColorTime'])
+            logger.info(f"Red time published: {data['redColorTime']}")
 
-    @app.route('/send', methods=['POST'])
-    def send_times():
-        """Recibe datos de la interfaz web y publica los valores en MQTT."""
-        try:
-            data = request.json
-            device_id = "00000001"  # Cambia si manejas varios dispositivos
-            base_topic = f"smartSemaphore/lora_Device/{device_id}/set/time/light"
+        if 'greenColorTime' in data:
+            mqtt_client.publish(f"{base_topic}/green", data['greenColorTime'])
+            logger.info(f"Green time published: {data['greenColorTime']}")
 
-            # Publicar los valores recibidos en MQTT
-            if 'redColorTime' in data:
-                mqtt_client.publish(f"{base_topic}/red", int(data['redColorTime']))
-                logger.info(f"Publicado red time: {data['redColorTime']}")
+        # Tiempo amarillo fijo
+        mqtt_client.publish(f"{base_topic}/yellow", 2)
 
-            if 'greenColorTime' in data:
-                mqtt_client.publish(f"{base_topic}/green", int(data['greenColorTime']))
-                logger.info(f"Publicado green time: {data['greenColorTime']}")
+        return jsonify({"status": "success", "message": "Values published successfully"})
+    except Exception as e:
+        logger.error(f"Error in /send: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
-            mqtt_client.publish(f"{base_topic}/yellow", 2)  # Valor fijo para amarillo
-
-            return jsonify({"status": "success", "message": "Values published successfully"})
-        except ValueError as e:
-            logger.error(f"Error en valores: {str(e)}")
-            return jsonify({"status": "error", "message": "Invalid value"}), 400
-        except Exception as e:
-            logger.error(f"Error en /send: {str(e)}")
-            return jsonify({"status": "error", "message": str(e)}), 500
-
-    if __name__ == '__main__':
-        logger.info("Iniciando servidor Flask...")
-        app.run(host='0.0.0.0', port=5000, debug=True)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
