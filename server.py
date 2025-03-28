@@ -1,4 +1,3 @@
-
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import logging
@@ -13,15 +12,24 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configurar conexión MQTT
-MQTT_BROKER = "localhost"
+MQTT_BROKER = "0.0.0.0"  # Cambiado a 0.0.0.0 para Replit
 MQTT_PORT = 1883
+
+# Crear cliente MQTT con mejor manejo de errores
 mqtt_client = mqtt.Client()
-mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
-mqtt_client.loop_start()
+
+def connect_mqtt():
+    try:
+        mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
+        mqtt_client.loop_start()
+        logger.info("Conexión MQTT establecida")
+    except Exception as e:
+        logger.error(f"Error conectando a MQTT: {str(e)}")
+
+connect_mqtt()
 
 LOG_FILE = "mqtt_logs.txt"
 
-# Create log file if it doesn't exist
 if not os.path.exists(LOG_FILE):
     open(LOG_FILE, 'a').close()
 
@@ -31,37 +39,23 @@ def send_times():
         data = request.json
         device_id = "00000001"
         base_topic = f"smartSemaphore/lora_Device/{device_id}/set/time/light"
-        
-        if 'redColorTime' in data:
-            value = int(data['redColorTime'])
-            mqtt_client.publish(f"{base_topic}/red", value)
-            log_message = f"{base_topic}/red {value}"
-            logger.info(f"Published red time: {value}")
-            with open(LOG_FILE, "a") as f:
-                f.write(log_message + "\n")
-            
-        if 'greenColorTime' in data:
-            value = int(data['greenColorTime'])
-            mqtt_client.publish(f"{base_topic}/green", value)
-            log_message = f"{base_topic}/green {value}"
-            logger.info(f"Published green time: {value}")
-            with open(LOG_FILE, "a") as f:
-                f.write(log_message + "\n")
-        
-        if 'yellowColorTime' in data:
-            value = int(data['yellowColorTime'])
-            mqtt_client.publish(f"{base_topic}/yellow", value)
-            log_message = f"{base_topic}/yellow {value}"
-            logger.info(f"Published yellow time: {value}")
-            with open(LOG_FILE, "a") as f:
-                f.write(log_message + "\n")
-            
+
+        for color, key in [('red', 'redColorTime'), ('green', 'greenColorTime'), ('yellow', 'yellowColorTime')]:
+            if key in data:
+                value = int(data[key])
+                topic = f"{base_topic}/{color}"
+                mqtt_client.publish(topic, value)
+                log_message = f"{topic} {value}"
+                logger.info(f"Published {color} time: {value}")
+                with open(LOG_FILE, "a") as f:
+                    f.write(log_message + "\n")
+
         return jsonify({"status": "success", "message": "Values published successfully"})
-    
+
     except ValueError as e:
         logger.error(f"Invalid value in request: {str(e)}")
         return jsonify({"status": "error", "message": "Invalid value"}), 400
-    
+
     except Exception as e:
         logger.error(f"Error in /send: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -69,19 +63,9 @@ def send_times():
 @app.route('/logs', methods=['GET'])
 def get_logs():
     try:
-        abs_path = os.path.abspath(LOG_FILE)
-        logger.info(f"Intentando leer logs desde: {abs_path}")
-
         with open(LOG_FILE, "r") as file:
-            raw_logs = file.readlines()
-            logs = [line.strip() for line in raw_logs if line.strip()]
-            logs = logs[-10:][::-1]
-            return jsonify({"logs": logs})
-    
-    except FileNotFoundError:
-        logger.error(f"Log file {LOG_FILE} not found")
-        return jsonify({"logs": [], "error": "Log file not found"}), 404
-    
+            logs = [line.strip() for line in file.readlines() if line.strip()]
+            return jsonify({"logs": logs[-10:][::-1]})
     except Exception as e:
         logger.error(f"Error reading logs: {str(e)}")
         return jsonify({"logs": [], "error": str(e)}), 500
