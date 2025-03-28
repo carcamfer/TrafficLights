@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import MapView from './components/MapView';
 import TrafficLightControl from './components/TrafficLightControl';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from '@tanstack/react-query'; // Assuming react-query is used
+import { useMQTT } from './hooks/use-mqtt';
+import { Toaster, toast } from 'sonner';
 
 interface TrafficLightData {
   id: number;
@@ -119,35 +120,37 @@ function App() {
     }
   ]);
 
-  const [systemLogs, setSystemLogs] = useState<string[]>([]);
-  const [wsConnected, setWsConnected] = useState(false);
-
-  const { data: logsData, error: logsError, isFetching } = useQuery({
-    queryKey: ['logs'],
-    queryFn: async () => {
-      const response = await fetch('http://localhost:5000/logs');
-      if (!response.ok) {
-        throw new Error('Error al obtener logs');
-      }
-      const data = await response.json();
-      console.log("Logs recibidos:", data);
-      return data;
-    },
-    refetchInterval: 2000, // Actualizar cada 2 segundos
-  });
-
-  useEffect(() => {
-    if (logsData?.logs) {
-      setSystemLogs(logsData.logs);
-    }
-  }, [logsData]);
+  const { isConnected, logs, publish } = useMQTT();
 
   const handleTimeChange = (id: number, type: 'inputGreen' | 'inputRed', value: number) => {
+    // Actualizar el estado local primero
     setTrafficLights(prev =>
       prev.map(light =>
         light.id === id ? { ...light, [type]: value } : light
       )
     );
+
+    // Determinar el color basado en el tipo
+    const color = type === 'inputGreen' ? 'green' : 'red';
+    
+    // Publicar el cambio vía MQTT
+    const success = publish({
+      deviceId: id,
+      color: color,
+      value: value
+    });
+
+    if (success) {
+      toast.success("Cambio enviado", {
+        description: `Semáforo #${id}: Tiempo de ${color === 'green' ? 'verde' : 'rojo'} actualizado a ${value}s`,
+        duration: 3000
+      });
+    } else {
+      toast.error("Error al enviar", {
+        description: "No se pudo enviar el comando al semáforo. Revise la conexión.",
+        duration: 5000
+      });
+    }
   };
 
   const handlePositionChange = (id: number, newPosition: [number, number]) => {
@@ -158,8 +161,61 @@ function App() {
     );
   };
 
+  // Actualizar el feedback cuando se reciban nuevos mensajes MQTT
+  useEffect(() => {
+    // Aquí podrías procesar los logs y actualizar los valores de feedback
+    // Formato esperado de logs: "smartSemaphore/lora_Device/00000001/info/time/light/red 40"
+    if (logs && logs.length > 0) {
+      // Hacer una copia del estado actual
+      const updatedLights = [...trafficLights];
+      let hasUpdates = false;
+
+      logs.forEach(log => {
+        const parts = log.split(' ');
+        if (parts.length !== 2) return; // Formato inválido
+
+        const topic = parts[0];
+        const value = parseInt(parts[1]);
+        if (isNaN(value)) return; // Valor no numérico
+
+        // Extraer deviceId y tipo de luz del topic
+        // Formato: smartSemaphore/lora_Device/<device_id>/info/time/light/<color>
+        const topicParts = topic.split('/');
+        if (topicParts.length < 7) return; // Formato de topic inválido
+
+        const deviceIdStr = topicParts[2];
+        const colorStr = topicParts[6];
+
+        if (!deviceIdStr || !colorStr) return;
+
+        // Convertir deviceId a número (eliminando ceros iniciales)
+        const deviceId = parseInt(deviceIdStr);
+        if (isNaN(deviceId)) return;
+
+        // Encontrar el semáforo correspondiente
+        const lightIndex = updatedLights.findIndex(light => light.id === deviceId);
+        if (lightIndex === -1) return; // Semáforo no encontrado
+
+        // Actualizar el valor de feedback correspondiente
+        if (colorStr === 'red') {
+          updatedLights[lightIndex].feedbackRed = value;
+          hasUpdates = true;
+        } else if (colorStr === 'green') {
+          updatedLights[lightIndex].feedbackGreen = value;
+          hasUpdates = true;
+        }
+      });
+
+      // Actualizar el estado solo si hubo cambios
+      if (hasUpdates) {
+        setTrafficLights(updatedLights);
+      }
+    }
+  }, [logs]);
+
   return (
     <div className="min-h-screen bg-gray-100">
+      <Toaster />
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto py-4 px-4">
           <h1 className="text-2xl font-bold text-gray-900">Sistema de Semáforos</h1>
@@ -210,21 +266,17 @@ function App() {
               <CardContent>
                 <div className="space-y-2">
                   <div className={`px-2 py-1 rounded-md text-sm ${
-                    isFetching ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                    isConnected ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                   }`}>
-                    WebSocket: {isFetching ? 'Cargando...' : 'Conectado'}
+                    WebSocket: {isConnected ? 'Conectado' : 'Cargando...'}
                   </div>
                   <div className="h-[500px] overflow-y-auto space-y-2 text-xs font-mono">
-                    {logsError ? (
-                      <div className="p-2 bg-red-50 text-red-800 rounded border border-red-200">
-                        Error al cargar logs: {logsError.message}
-                      </div>
-                    ) : systemLogs.length === 0 ? (
+                    {logs.length === 0 ? (
                       <div className="p-2 bg-gray-50 text-gray-500 rounded border border-gray-200">
                         No hay logs disponibles
                       </div>
                     ) : (
-                      systemLogs.map((log, index) => (
+                      logs.map((log, index) => (
                         <div 
                           key={index} 
                           className="p-2 bg-gray-50 rounded border border-gray-200 break-all hover:bg-gray-100"
