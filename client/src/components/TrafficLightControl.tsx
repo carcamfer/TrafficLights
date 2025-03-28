@@ -58,11 +58,15 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
                     headers: {
                       'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ greenColorTime: inputGreen })
+                    body: JSON.stringify({ greenColorTime: parseInt(inputGreen) })
                   });
                   if (!response.ok) throw new Error('Failed to send');
+                  const data = await response.json();
+                  console.log('Success:', data);
+                  alert('Tiempo verde actualizado');
                 } catch (error) {
                   console.error('Error sending green time:', error);
+                  alert('Error al actualizar tiempo verde');
                 }
               }}
             >
@@ -99,11 +103,15 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
                     headers: {
                       'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ redColorTime: inputRed })
+                    body: JSON.stringify({ redColorTime: parseInt(inputRed) })
                   });
                   if (!response.ok) throw new Error('Failed to send');
+                  const data = await response.json();
+                  console.log('Success:', data);
+                  alert('Tiempo rojo actualizado');
                 } catch (error) {
                   console.error('Error sending red time:', error);
+                  alert('Error al actualizar tiempo rojo');
                 }
               }}
             >

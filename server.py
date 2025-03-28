@@ -19,16 +19,22 @@ LOG_FILE = "mqtt_logs.txt"
 
 @app.route('/send', methods=['POST'])
 def send_times():
-    data = request.json
-    device_id = "00000001"  # Default device ID
-    base_topic = f"smartSemaphore/lora_Device/{device_id}/set/time/light"
-    
-    if 'redColorTime' in data:
-        mqtt_client.publish(f"{base_topic}/red", data['redColorTime'])
-    if 'greenColorTime' in data:
-        mqtt_client.publish(f"{base_topic}/green", data['greenColorTime'])
-    
-    return jsonify({"status": "success"})
+    try:
+        data = request.json
+        device_id = "00000001"  # Default device ID
+        base_topic = f"smartSemaphore/lora_Device/{device_id}/set/time/light"
+        
+        if 'redColorTime' in data:
+            mqtt_client.publish(f"{base_topic}/red", str(data['redColorTime']))
+            logger.info(f"Published red time: {data['redColorTime']}")
+        if 'greenColorTime' in data:
+            mqtt_client.publish(f"{base_topic}/green", str(data['greenColorTime']))
+            logger.info(f"Published green time: {data['greenColorTime']}")
+        
+        return jsonify({"status": "success"})
+    except Exception as e:
+        logger.error(f"Error in /send: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/logs', methods=['GET'])
 def get_logs():
