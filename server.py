@@ -36,6 +36,10 @@ LOG_FILE = "mqtt_logs.txt"
 if not os.path.exists(LOG_FILE):
     open(LOG_FILE, 'a').close()
 
+@app.route('/')
+def index():
+    return "Smart Semaphore API Server Running"
+
 @app.route('/send', methods=['POST'])
 def send_times():
     try:
