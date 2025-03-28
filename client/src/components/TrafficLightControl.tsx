@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface TrafficLightControlProps {
   id: number;
@@ -9,7 +9,7 @@ interface TrafficLightControlProps {
   inputRed: number;
   feedbackRed: number;
   onTimeChange: (id: number, type: 'inputGreen' | 'inputRed', value: number) => void;
-  systemLogs: string[]; // Added systemLogs prop
+  systemLogs: string[]; 
 }
 
 const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
@@ -21,8 +21,37 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
   inputRed,
   feedbackRed,
   onTimeChange,
-  systemLogs // Added systemLogs prop
+  systemLogs
 }) => {
+  const [inputGreenState, setInputGreen] = useState(inputGreen);
+  const [inputRedState, setInputRed] = useState(inputRed);
+
+  const handleSubmit = async (type: 'inputGreen' | 'inputRed') => {
+    const value = type === 'inputGreen' ? inputGreenState : inputRedState;
+    try {
+      const response = await fetch('http://0.0.0.0:5000/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ [type === 'inputGreen' ? 'greenColorTime' : 'redColorTime']: value }),
+      });
+      if (!response.ok) {
+        throw new Error(`Error al enviar datos: ${response.status} ${response.statusText}`);
+      }
+      console.log(`Tiempo ${type === 'inputGreen' ? 'verde' : 'rojo'} enviado:`, value);
+
+      // Actualizar el estado local para reflejar el cambio
+      if (type === 'inputGreen') {
+        setInputGreen(value);
+      } else {
+        setInputRed(value);
+      }
+    } catch (error) {
+      console.error('Error al enviar tiempo:', error);
+    }
+  };
+
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
       <div className="flex items-center justify-between mb-3">
@@ -48,29 +77,12 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
               type="number"
               min="1"
               className="border rounded-md px-3 py-1.5 w-24 text-right"
-              value={inputGreen}
-              onChange={(e) => onTimeChange(id, 'inputGreen', parseInt(e.target.value) || 0)}
+              value={inputGreenState}
+              onChange={(e) => setInputGreen(parseInt(e.target.value) || 0)}
             />
             <button 
               className="bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 active:bg-green-800 transform active:scale-90 transition-all duration-150"
-              onClick={async () => {
-                try {
-                  const response = await fetch('http://localhost:5000/send', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ greenColorTime: inputGreen }),
-                  });
-                  if (!response.ok) {
-                    throw new Error(`Error al enviar datos: ${response.status} ${response.statusText}`);
-                  }
-                  console.log('Tiempo verde enviado:', inputGreen);
-                } catch (error) {
-                  console.error('Error al enviar tiempo verde:', error);
-                  // Add error handling, e.g., display an error message to the user
-                }
-              }}
+              onClick={() => handleSubmit('inputGreen')}
             >
               Submit
             </button>
@@ -93,29 +105,12 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
               type="number"
               min="1"
               className="border rounded-md px-3 py-1.5 w-24 text-right"
-              value={inputRed}
-              onChange={(e) => onTimeChange(id, 'inputRed', parseInt(e.target.value) || 0)}
+              value={inputRedState}
+              onChange={(e) => setInputRed(parseInt(e.target.value) || 0)}
             />
             <button 
               className="bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600 active:bg-red-800 transform active:scale-90 transition-all duration-150"
-              onClick={async () => {
-                try {
-                  const response = await fetch('http://localhost:5000/send', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ redColorTime: inputRed }),
-                  });
-                  if (!response.ok) {
-                    throw new Error(`Error al enviar datos: ${response.status} ${response.statusText}`);
-                  }
-                  console.log('Tiempo rojo enviado:', inputRed);
-                } catch (error) {
-                  console.error('Error al enviar tiempo rojo:', error);
-                  // Add error handling, e.g., display an error message to the user
-                }
-              }}
+              onClick={() => handleSubmit('inputRed')}
             >
               Submit
             </button>
