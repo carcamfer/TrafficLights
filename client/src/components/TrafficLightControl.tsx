@@ -60,15 +60,15 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
                     headers: {
                       'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                      redColorTime: inputRed,
-                      greenColorTime: inputGreen
-                    }),
+                    body: JSON.stringify({ greenColorTime: inputGreen }),
                   });
-                  if (!response.ok) throw new Error('Network response was not ok');
+                  if (!response.ok) {
+                    throw new Error(`Error al enviar datos: ${response.status} ${response.statusText}`);
+                  }
                   console.log('Tiempo verde enviado:', inputGreen);
                 } catch (error) {
-                  console.error('Error:', error);
+                  console.error('Error al enviar tiempo verde:', error);
+                  // Add error handling, e.g., display an error message to the user
                 }
               }}
             >
@@ -105,15 +105,15 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
                     headers: {
                       'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                      redColorTime: inputRed,
-                      greenColorTime: inputGreen
-                    }),
+                    body: JSON.stringify({ redColorTime: inputRed }),
                   });
-                  if (!response.ok) throw new Error('Network response was not ok');
+                  if (!response.ok) {
+                    throw new Error(`Error al enviar datos: ${response.status} ${response.statusText}`);
+                  }
                   console.log('Tiempo rojo enviado:', inputRed);
                 } catch (error) {
-                  console.error('Error:', error);
+                  console.error('Error al enviar tiempo rojo:', error);
+                  // Add error handling, e.g., display an error message to the user
                 }
               }}
             >
