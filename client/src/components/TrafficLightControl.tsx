@@ -41,13 +41,21 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
         {/* Input Verde */}
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium">Input Verde (s)</label>
-          <input
-            type="number"
-            min="1"
-            className="border rounded-md px-3 py-1.5 w-24 text-right"
-            value={inputGreen}
-            onChange={(e) => onTimeChange(id, 'inputGreen', parseInt(e.target.value) || 0)}
-          />
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="1"
+              className="border rounded-md px-3 py-1.5 w-24 text-right"
+              value={inputGreen}
+              onChange={(e) => onTimeChange(id, 'inputGreen', parseInt(e.target.value) || 0)}
+            />
+            <button 
+              className="bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600"
+              onClick={() => console.log('Submit Verde:', inputGreen)}
+            >
+              Submit
+            </button>
+          </div>
         </div>
 
         {/* Feedback Verde */}
@@ -61,13 +69,21 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
         {/* Input Rojo */}
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium">Input Rojo (s)</label>
-          <input
-            type="number"
-            min="1"
-            className="border rounded-md px-3 py-1.5 w-24 text-right"
-            value={inputRed}
-            onChange={(e) => onTimeChange(id, 'inputRed', parseInt(e.target.value) || 0)}
-          />
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="1"
+              className="border rounded-md px-3 py-1.5 w-24 text-right"
+              value={inputRed}
+              onChange={(e) => onTimeChange(id, 'inputRed', parseInt(e.target.value) || 0)}
+            />
+            <button 
+              className="bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600"
+              onClick={() => console.log('Submit Rojo:', inputRed)}
+            >
+              Submit
+            </button>
+          </div>
         </div>
 
         {/* Feedback Rojo */}
