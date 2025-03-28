@@ -51,7 +51,20 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
             />
             <button 
               className="bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600"
-              onClick={() => console.log('Submit Verde:', inputGreen)}
+              onClick={async () => {
+                try {
+                  const response = await fetch('http://localhost:5000/send', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ greenColorTime: inputGreen })
+                  });
+                  if (!response.ok) throw new Error('Failed to send');
+                } catch (error) {
+                  console.error('Error sending green time:', error);
+                }
+              }}
             >
               Submit
             </button>
@@ -79,7 +92,20 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
             />
             <button 
               className="bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600"
-              onClick={() => console.log('Submit Rojo:', inputRed)}
+              onClick={async () => {
+                try {
+                  const response = await fetch('http://localhost:5000/send', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ redColorTime: inputRed })
+                  });
+                  if (!response.ok) throw new Error('Failed to send');
+                } catch (error) {
+                  console.error('Error sending red time:', error);
+                }
+              }}
             >
               Submit
             </button>

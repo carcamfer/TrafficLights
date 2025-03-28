@@ -1,16 +1,34 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import logging
 import os
+import paho.mqtt.client as mqtt
 
 app = Flask(__name__)
 CORS(app)
+
+mqtt_client = mqtt.Client()
+mqtt_client.connect("0.0.0.0", 1883, 60)
+mqtt_client.loop_start()
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 LOG_FILE = "mqtt_logs.txt"
+
+@app.route('/send', methods=['POST'])
+def send_times():
+    data = request.json
+    device_id = "00000001"  # Default device ID
+    base_topic = f"smartSemaphore/lora_Device/{device_id}/set/time/light"
+    
+    if 'redColorTime' in data:
+        mqtt_client.publish(f"{base_topic}/red", data['redColorTime'])
+    if 'greenColorTime' in data:
+        mqtt_client.publish(f"{base_topic}/green", data['greenColorTime'])
+    
+    return jsonify({"status": "success"})
 
 @app.route('/logs', methods=['GET'])
 def get_logs():
