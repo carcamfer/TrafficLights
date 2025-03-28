@@ -50,7 +50,7 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
               onChange={(e) => onTimeChange(id, 'inputGreen', parseInt(e.target.value) || 0)}
             />
             <button 
-              className="bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600"
+              className="bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 active:bg-green-700 transform active:scale-95 transition-transform"
               onClick={() => console.log('Submit Verde:', inputGreen)}
             >
               Submit
