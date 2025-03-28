@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 interface TrafficLightControlProps {
   id: number;
@@ -9,7 +9,6 @@ interface TrafficLightControlProps {
   inputRed: number;
   feedbackRed: number;
   onTimeChange: (id: number, type: 'inputGreen' | 'inputRed', value: number) => void;
-  systemLogs: string[]; 
 }
 
 const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
@@ -20,38 +19,8 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
   feedbackGreen,
   inputRed,
   feedbackRed,
-  onTimeChange,
-  systemLogs
+  onTimeChange
 }) => {
-  const [inputGreenState, setInputGreen] = useState(inputGreen);
-  const [inputRedState, setInputRed] = useState(inputRed);
-
-  const handleSubmit = async (type: 'inputGreen' | 'inputRed') => {
-    const value = type === 'inputGreen' ? inputGreenState : inputRedState;
-    try {
-      const response = await fetch('http://0.0.0.0:5000/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ [type === 'inputGreen' ? 'greenColorTime' : 'redColorTime']: value }),
-      });
-      if (!response.ok) {
-        throw new Error(`Error al enviar datos: ${response.status} ${response.statusText}`);
-      }
-      console.log(`Tiempo ${type === 'inputGreen' ? 'verde' : 'rojo'} enviado:`, value);
-
-      // Actualizar el estado local para reflejar el cambio
-      if (type === 'inputGreen') {
-        setInputGreen(value);
-      } else {
-        setInputRed(value);
-      }
-    } catch (error) {
-      console.error('Error al enviar tiempo:', error);
-    }
-  };
-
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
       <div className="flex items-center justify-between mb-3">
@@ -77,12 +46,29 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
               type="number"
               min="1"
               className="border rounded-md px-3 py-1.5 w-24 text-right"
-              value={inputGreenState}
-              onChange={(e) => setInputGreen(parseInt(e.target.value) || 0)}
+              value={inputGreen}
+              onChange={(e) => onTimeChange(id, 'inputGreen', parseInt(e.target.value) || 0)}
             />
             <button 
               className="bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 active:bg-green-800 transform active:scale-90 transition-all duration-150"
-              onClick={() => handleSubmit('inputGreen')}
+              onClick={async () => {
+                try {
+                  const response = await fetch('http://localhost:5000/send', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      redColorTime: inputRed,
+                      greenColorTime: inputGreen
+                    }),
+                  });
+                  if (!response.ok) throw new Error('Network response was not ok');
+                  console.log('Tiempo verde enviado:', inputGreen);
+                } catch (error) {
+                  console.error('Error:', error);
+                }
+              }}
             >
               Submit
             </button>
@@ -93,7 +79,7 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Feedback Verde (s)</span>
           <span className="border rounded-md px-3 py-1.5 w-24 text-right bg-gray-50">
-            {systemLogs?.find(log => log.includes(`smartSemaphore/lora_Device/${id.toString().padStart(8, '0')}/info/time/light/green`))?.split(' ').pop() || feedbackGreen}
+            {feedbackGreen}
           </span>
         </div>
 
@@ -105,12 +91,29 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
               type="number"
               min="1"
               className="border rounded-md px-3 py-1.5 w-24 text-right"
-              value={inputRedState}
-              onChange={(e) => setInputRed(parseInt(e.target.value) || 0)}
+              value={inputRed}
+              onChange={(e) => onTimeChange(id, 'inputRed', parseInt(e.target.value) || 0)}
             />
             <button 
               className="bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600 active:bg-red-800 transform active:scale-90 transition-all duration-150"
-              onClick={() => handleSubmit('inputRed')}
+              onClick={async () => {
+                try {
+                  const response = await fetch('http://localhost:5000/send', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      redColorTime: inputRed,
+                      greenColorTime: inputGreen
+                    }),
+                  });
+                  if (!response.ok) throw new Error('Network response was not ok');
+                  console.log('Tiempo rojo enviado:', inputRed);
+                } catch (error) {
+                  console.error('Error:', error);
+                }
+              }}
             >
               Submit
             </button>
@@ -121,7 +124,7 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Feedback Rojo (s)</span>
           <span className="border rounded-md px-3 py-1.5 w-24 text-right bg-gray-50">
-            {systemLogs?.find(log => log.includes(`smartSemaphore/lora_Device/${id.toString().padStart(8, '0')}/info/time/light/red`))?.split(' ').pop() || feedbackRed}
+            {feedbackRed}
           </span>
         </div>
 
