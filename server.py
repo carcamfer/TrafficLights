@@ -1,3 +1,4 @@
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import logging
@@ -11,22 +12,24 @@ CORS(app)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configurar conexión MQTT
-MQTT_BROKER = "0.0.0.0"  # Cambiado a 0.0.0.0 para Replit
+# Configuración MQTT
+MQTT_BROKER = "0.0.0.0"
 MQTT_PORT = 1883
-
-# Crear cliente MQTT con mejor manejo de errores
 mqtt_client = mqtt.Client()
 
-def connect_mqtt():
-    try:
-        mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
-        mqtt_client.loop_start()
-        logger.info("Conexión MQTT establecida")
-    except Exception as e:
-        logger.error(f"Error conectando a MQTT: {str(e)}")
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        logger.info("Conexión MQTT exitosa.")
+    else:
+        logger.error(f"Conexión MQTT fallida con código {rc}")
 
-connect_mqtt()
+mqtt_client.on_connect = on_connect
+
+try:
+    mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    mqtt_client.loop_start()
+except Exception as e:
+    logger.error(f"Error al conectar con el broker MQTT: {str(e)}")
 
 LOG_FILE = "mqtt_logs.txt"
 
@@ -39,25 +42,25 @@ def send_times():
         data = request.json
         device_id = "00000001"
         base_topic = f"smartSemaphore/lora_Device/{device_id}/set/time/light"
-
+        
         for color, key in [('red', 'redColorTime'), ('green', 'greenColorTime'), ('yellow', 'yellowColorTime')]:
             if key in data:
                 value = int(data[key])
                 topic = f"{base_topic}/{color}"
                 mqtt_client.publish(topic, value)
                 log_message = f"{topic} {value}"
-                logger.info(f"Published {color} time: {value}")
+                logger.info(f"Publicado tiempo {color}: {value}")
                 with open(LOG_FILE, "a") as f:
                     f.write(log_message + "\n")
 
-        return jsonify({"status": "success", "message": "Values published successfully"})
+        return jsonify({"status": "success", "message": "Valores publicados exitosamente"})
 
     except ValueError as e:
-        logger.error(f"Invalid value in request: {str(e)}")
-        return jsonify({"status": "error", "message": "Invalid value"}), 400
+        logger.error(f"Valor no válido en la solicitud: {str(e)}")
+        return jsonify({"status": "error", "message": "Valor no válido"}), 400
 
     except Exception as e:
-        logger.error(f"Error in /send: {str(e)}")
+        logger.error(f"Error en /send: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/logs', methods=['GET'])
@@ -67,9 +70,9 @@ def get_logs():
             logs = [line.strip() for line in file.readlines() if line.strip()]
             return jsonify({"logs": logs[-10:][::-1]})
     except Exception as e:
-        logger.error(f"Error reading logs: {str(e)}")
+        logger.error(f"Error leyendo los logs: {str(e)}")
         return jsonify({"logs": [], "error": str(e)}), 500
 
 if __name__ == '__main__':
-    logger.info("Starting Flask server...")
+    logger.info("Iniciando servidor Flask...")
     app.run(host='0.0.0.0', port=5000, debug=True)
