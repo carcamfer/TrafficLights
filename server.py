@@ -21,6 +21,10 @@ mqtt_client.loop_start()
 
 LOG_FILE = "mqtt_logs.txt"
 
+# Create log file if it doesn't exist
+if not os.path.exists(LOG_FILE):
+    open(LOG_FILE, 'a').close()
+
 @app.route('/send', methods=['POST'])
 def send_times():
     try:
@@ -31,17 +35,26 @@ def send_times():
         if 'redColorTime' in data:
             value = int(data['redColorTime'])
             mqtt_client.publish(f"{base_topic}/red", value)
+            log_message = f"{base_topic}/red {value}"
             logger.info(f"Published red time: {value}")
+            with open(LOG_FILE, "a") as f:
+                f.write(log_message + "\n")
             
         if 'greenColorTime' in data:
             value = int(data['greenColorTime'])
             mqtt_client.publish(f"{base_topic}/green", value)
+            log_message = f"{base_topic}/green {value}"
             logger.info(f"Published green time: {value}")
+            with open(LOG_FILE, "a") as f:
+                f.write(log_message + "\n")
         
         if 'yellowColorTime' in data:
             value = int(data['yellowColorTime'])
             mqtt_client.publish(f"{base_topic}/yellow", value)
+            log_message = f"{base_topic}/yellow {value}"
             logger.info(f"Published yellow time: {value}")
+            with open(LOG_FILE, "a") as f:
+                f.write(log_message + "\n")
             
         return jsonify({"status": "success", "message": "Values published successfully"})
     
