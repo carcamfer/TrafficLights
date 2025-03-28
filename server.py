@@ -11,7 +11,7 @@ CORS(app)
 LOG_FILE = "mqtt_logs.txt"
 
 # Configurar MQTT (cambia localhost por el broker en Replit si es necesario)
-MQTT_BROKER = os.getenv("MQTT_BROKER", "0.0.0.0")  # Usa broker.hivemq.com en Replit
+MQTT_BROKER = os.getenv("MQTT_BROKER", "broker.hivemq.com")  # Usar broker público
 MQTT_PORT = 1883
 device_id = "00000001"
 
