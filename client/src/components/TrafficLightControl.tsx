@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 interface TrafficLightControlProps {
   id: number;
@@ -21,9 +21,6 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
   feedbackRed,
   onTimeChange
 }) => {
-  const [inputGreenState, setInputGreen] = useState(inputGreen.toString());
-  const [inputRedState, setInputRed] = useState(inputRed.toString());
-
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
       <div className="flex items-center justify-between mb-3">
@@ -49,35 +46,23 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
               type="number"
               min="1"
               className="border rounded-md px-3 py-1.5 w-24 text-right"
-              value={inputGreenState}
-              onChange={(e) => {
-                setInputGreen(e.target.value);
-                onTimeChange(id, 'inputGreen', parseInt(e.target.value) || 0);
-              }}
+              value={inputGreen}
+              onChange={(e) => onTimeChange(id, 'inputGreen', parseInt(e.target.value) || 0)}
             />
             <button 
               className="bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600"
               onClick={async () => {
                 try {
-                  const value = parseInt(inputGreenState);
-                  if (isNaN(value)) {
-                    alert('Por favor ingrese un número válido');
-                    return;
-                  }
                   const response = await fetch('http://localhost:5000/send', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ greenColorTime: value })
+                    body: JSON.stringify({ greenColorTime: inputGreen })
                   });
                   if (!response.ok) throw new Error('Failed to send');
-                  const data = await response.json();
-                  console.log('Success:', data);
-                  alert('Tiempo verde actualizado');
                 } catch (error) {
                   console.error('Error sending green time:', error);
-                  alert('Error al actualizar tiempo verde');
                 }
               }}
             >
@@ -102,35 +87,23 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
               type="number"
               min="1"
               className="border rounded-md px-3 py-1.5 w-24 text-right"
-              value={inputRedState}
-              onChange={(e) => {
-                setInputRed(e.target.value);
-                onTimeChange(id, 'inputRed', parseInt(e.target.value) || 0);
-              }}
+              value={inputRed}
+              onChange={(e) => onTimeChange(id, 'inputRed', parseInt(e.target.value) || 0)}
             />
             <button 
               className="bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600"
               onClick={async () => {
                 try {
-                  const value = parseInt(inputRedState);
-                  if (isNaN(value)) {
-                    alert('Por favor ingrese un número válido');
-                    return;
-                  }
                   const response = await fetch('http://localhost:5000/send', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ redColorTime: value })
+                    body: JSON.stringify({ redColorTime: inputRed })
                   });
                   if (!response.ok) throw new Error('Failed to send');
-                  const data = await response.json();
-                  console.log('Success:', data);
-                  alert('Tiempo rojo actualizado');
                 } catch (error) {
                   console.error('Error sending red time:', error);
-                  alert('Error al actualizar tiempo rojo');
                 }
               }}
             >
