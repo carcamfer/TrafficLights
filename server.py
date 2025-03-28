@@ -25,13 +25,19 @@ def send_times():
         base_topic = f"smartSemaphore/lora_Device/{device_id}/set/time/light"
         
         if 'redColorTime' in data:
-            mqtt_client.publish(f"{base_topic}/red", str(data['redColorTime']))
-            logger.info(f"Published red time: {data['redColorTime']}")
+            value = int(data['redColorTime'])
+            mqtt_client.publish(f"{base_topic}/red", value)
+            logger.info(f"Published red time: {value}")
+            
         if 'greenColorTime' in data:
-            mqtt_client.publish(f"{base_topic}/green", str(data['greenColorTime']))
-            logger.info(f"Published green time: {data['greenColorTime']}")
-        
-        return jsonify({"status": "success"})
+            value = int(data['greenColorTime'])
+            mqtt_client.publish(f"{base_topic}/green", value)
+            logger.info(f"Published green time: {value}")
+            
+        return jsonify({"status": "success", "message": "Values published successfully"})
+    except ValueError as e:
+        logger.error(f"Invalid value in request: {str(e)}")
+        return jsonify({"status": "error", "message": "Invalid value"}), 400
     except Exception as e:
         logger.error(f"Error in /send: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
