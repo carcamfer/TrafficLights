@@ -53,13 +53,15 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
               className="bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 active:bg-green-800 transform active:scale-90 transition-all duration-150"
               onClick={async () => {
                 try {
+                  const deviceId = String(id).padStart(8, '0');
+                  console.log('Enviando para semáforo:', deviceId);
                   const response = await fetch('http://localhost:5000/send', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                      deviceId: String(id).padStart(8, '0'),
+                      deviceId,
                       greenColorTime: inputGreen
                     }),
                   });
@@ -98,13 +100,15 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
               className="bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600 active:bg-red-800 transform active:scale-90 transition-all duration-150"
               onClick={async () => {
                 try {
+                  const deviceId = String(id).padStart(8, '0');
+                  console.log('Enviando para semáforo:', deviceId);
                   const response = await fetch('http://localhost:5000/send', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                      deviceId: String(id).padStart(8, '0'),
+                      deviceId,
                       redColorTime: inputRed
                     }),
                   });
