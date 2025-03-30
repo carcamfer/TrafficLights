@@ -59,7 +59,7 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
                       'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                      redColorTime: inputRed,
+                      deviceId: String(id).padStart(8, '0'),
                       greenColorTime: inputGreen
                     }),
                   });
@@ -104,8 +104,8 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
                       'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                      redColorTime: inputRed,
-                      greenColorTime: inputGreen
+                      deviceId: String(id).padStart(8, '0'),
+                      redColorTime: inputRed
                     }),
                   });
                   if (!response.ok) throw new Error('Network response was not ok');
