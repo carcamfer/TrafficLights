@@ -61,7 +61,7 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
                       'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                      deviceId,
+                      device_id: deviceId,
                       greenColorTime: inputGreen
                     }),
                   });
@@ -108,7 +108,7 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
                       'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                      deviceId,
+                      device_id: deviceId,
                       redColorTime: inputRed
                     }),
                   });
