@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
 // Configuración MQTT
-const mqttClient = mqtt.connect('mqtt://localhost:1883', {
+const mqttClient = mqtt.connect('mqtt://broker.hivemq.com:1883', {
   clientId: 'traffic_control_server_' + Math.random().toString(16).substr(2, 8),
   clean: true,
   connectTimeout: 4000,
