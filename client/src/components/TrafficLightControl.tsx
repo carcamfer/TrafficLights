@@ -55,10 +55,11 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
                 try {
                   const deviceId = String(id).padStart(8, '0');
                   console.log('Enviando para semáforo:', deviceId);
-                  const response = await fetch('/send', {
+                  const response = await fetch('http://localhost:5000/send', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
+                      'device_id': deviceId,
                     },
                     body: JSON.stringify({
                       device_id: deviceId,
@@ -102,10 +103,11 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
                 try {
                   const deviceId = String(id).padStart(8, '0');
                   console.log('Enviando para semáforo:', deviceId);
-                  const response = await fetch('/send', {
+                  const response = await fetch('http://localhost:5000/send', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
+                      'device_id': deviceId,
                     },
                     body: JSON.stringify({
                       device_id: deviceId,
