@@ -9,40 +9,37 @@ app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
-// Configuración MQTT
-const mqttClient = mqtt.connect('mqtt://localhost:1883', {
-  clientId: 'traffic_control_server_' + Math.random().toString(16).substr(2, 8),
-  clean: true,
-  connectTimeout: 4000,
-  reconnectPeriod: 1000,
-  keepalive: 60,
-  resubscribe: true
-});
+import fs from 'fs';
 
 const wsServer = new WebSocket.Server({ noServer: true, path: '/ws' });
 let systemLogs: string[] = [];
 
-mqttClient.on('connect', () => {
-  mqttClient.subscribe('#');
-});
-
-mqttClient.on('error', (error) => {
-  console.error(`Error MQTT: ${error.message}`);
-});
-
-mqttClient.on('message', (topic, message) => {
-  const logEntry = `${topic} ${message.toString()}`;
-  if (systemLogs.length >= 10) {
-    systemLogs.pop();
+// Función para leer los últimos logs
+function readLastLogs() {
+  try {
+    const logs = fs.readFileSync('../mqtt_logs.txt', 'utf8')
+      .split('\n')
+      .filter(line => line.trim() !== '')
+      .slice(-10);
+    return logs;
+  } catch (error) {
+    console.error('Error reading logs:', error);
+    return [];
   }
-  systemLogs.unshift(logEntry);
+}
 
-  wsServer.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(logEntry); // Simplified message sending
-    }
-  });
-});
+// Actualizar logs periódicamente
+setInterval(() => {
+  const newLogs = readLastLogs();
+  if (newLogs.length > 0) {
+    systemLogs = newLogs;
+    wsServer.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(newLogs));
+      }
+    });
+  }
+}, 1000);
 
 app.get("/api/logs", (_req, res) => {
   res.json(systemLogs);
