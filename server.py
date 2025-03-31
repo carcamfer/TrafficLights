@@ -19,6 +19,30 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+@app.route('/send', methods=['POST'])
+def send_times():
+    try:
+        data = request.json
+        device_id = data.get('device_id', '00000001')
+        base_topic = f"smartSemaphore/lora_Device/{device_id}/set/time/light"
+
+        # Publicar tiempos en MQTT
+        if 'redColorTime' in data:
+            mqtt_client.publish(f"{base_topic}/red", data['redColorTime'])
+            logger.info(f"Red time published for {device_id}: {data['redColorTime']}")
+
+        if 'greenColorTime' in data:
+            mqtt_client.publish(f"{base_topic}/green", data['greenColorTime'])
+            logger.info(f"Green time published for {device_id}: {data['greenColorTime']}")
+
+        # Tiempo amarillo fijo
+        mqtt_client.publish(f"{base_topic}/yellow", 2)
+
+        return jsonify({"status": "success", "message": "Values published successfully"})
+    except Exception as e:
+        logger.error(f"Error in /send: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route('/logs', methods=['GET'])
 def get_logs():
     try:
