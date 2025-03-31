@@ -45,12 +45,6 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
     <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold">Semáforo #{id}</h3>
-        <button 
-          onClick={() => handleSubmit(inputRed, inputGreen)}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Aplicar Cambios
-        </button>
       </div>
       <div className="space-y-3">
         {/* Estado IoT */}
@@ -84,8 +78,7 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
                   const response = await fetch('http://localhost:5000/send', {
                     method: 'POST',
                     headers: {
-                      'Content-Type': 'application/json',
-                      'device_id': deviceId,
+                      'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                       device_id: deviceId,
@@ -132,8 +125,7 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
                   const response = await fetch('http://localhost:5000/send', {
                     method: 'POST',
                     headers: {
-                      'Content-Type': 'application/json',
-                      'device_id': deviceId,
+                      'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                       device_id: deviceId,
