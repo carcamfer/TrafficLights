@@ -21,10 +21,36 @@ const TrafficLightControl: React.FC<TrafficLightControlProps> = ({
   feedbackRed,
   onTimeChange
 }) => {
+  const handleSubmit = async (redTime: number, greenTime: number) => {
+    const deviceId = String(id).padStart(8, '0');
+    try {
+      const response = await fetch('http://localhost:5000/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          device_id: deviceId,
+          redColorTime: redTime,
+          greenColorTime: greenTime
+        })
+      });
+      console.log('Respuesta del servidor:', await response.json());
+    } catch (error) {
+      console.error('Error al enviar datos:', error);
+    }
+  };
+
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold">Semáforo #{id}</h3>
+        <button 
+          onClick={() => handleSubmit(inputRed, inputGreen)}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Aplicar Cambios
+        </button>
       </div>
       <div className="space-y-3">
         {/* Estado IoT */}
