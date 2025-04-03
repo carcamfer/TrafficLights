@@ -35,7 +35,7 @@ def serve_static_files(path):
 def send_times():
     try:
         data = request.json
-        device_id = data.get('device_id', '00000001')
+        device_id = data['device_id']  # device_id siempre viene del frontend
         base_topic = f"smartSemaphore/lora_Device/{device_id}/set/time/light"
 
         # Publicar tiempos en MQTT
